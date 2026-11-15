@@ -91,6 +91,8 @@ This file, `spec/calculators.md`, `spec/calculator-input-definitions.md`, and th
 
 Marcus Baw, as the owner of both `clincalc` and OHTF, has confirmed OHTF's [open-source commitment](https://openhealthtechnology.org/governance/open-source-commitment/) applies to this project (2026-11-10), with the understanding that any calculator whose primary-source licensing would conflict with that commitment is omitted from the registry rather than compromising it - consistent with how `clincalc` already treats proprietary and rights-review calculators (`docs/calculators.md`'s "Unavailable on principle" section).
 
+When research for this project finds something we can't use because no free, openly licensed implementation exists - a calculator we can't ship, an instrument, a dataset, or any other dependency - record it as a gap in [`ohtf/awesome-missing-nhs-things`](https://github.com/ohtf/awesome-missing-nhs-things), a curated list of NHS and UK health-tech software, data and infrastructure that doesn't exist openly. Add or update the entry via a pull request against that repository, citing the primary rights-holder source for the licensing finding, and follow its own `AGENTS.md`.
+
 **Major announcements** (releases with broad significance, governance changes, security advisories affecting users) should be published to [openhealthtechnology.org](https://openhealthtechnology.org), via a PR against [`ohtf/openhealthtechnology.org-website`](https://github.com/ohtf/openhealthtechnology.org-website). Routine releases and day-to-day work do not need this - use judgement about what counts as "major."
 
 ## Roadmap snapshot
