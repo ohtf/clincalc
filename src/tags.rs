@@ -284,6 +284,10 @@ pub const TAGS: &[(&str, &[&str])] = &[
         "protein_target",
         &["primary-care", "endocrinology", "musculoskeletal"],
     ),
+    (
+        "energy_restricted_protein_target",
+        &["primary-care", "endocrinology", "musculoskeletal"],
+    ),
     ("wilks", &["musculoskeletal"]),
     ("dots", &["musculoskeletal"]),
     ("findrisc", &["primary-care", "endocrinology", "screening"]),

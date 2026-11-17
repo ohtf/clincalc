@@ -64,6 +64,7 @@ pub mod durnin_womersley_skinfold;
 pub mod egfr;
 pub mod ehra;
 pub mod energy_requirement;
+pub mod energy_restricted_protein_target;
 pub mod epds;
 pub mod euroscore2;
 pub mod familial_hypercholesterolaemia;
