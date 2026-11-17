@@ -1,6 +1,6 @@
 # Calculator catalogue
 
-The full registry: 162 entries comprising 148 active calculators that compute a real result, 11 named-but-unavailable rights-locked stubs (carrying `proprietary` and `unavailable`), two rights-review stubs, and one clinical-safety stub (the latter three carry `unavailable` without `proprietary`). One row per calculator.
+The full registry: 163 entries comprising 149 active calculators that compute a real result, 11 named-but-unavailable rights-locked stubs (carrying `proprietary` and `unavailable`), two rights-review stubs, and one clinical-safety stub (the latter three carry `unavailable` without `proprietary`). One row per calculator.
 
 `clincalc list` prints the same data at any time; `clincalc list --tag <tag>` filters by tag; `clincalc calc <name> --license` prints the algorithm's distribution licence for any single entry.
 
@@ -187,6 +187,7 @@ The full vocabulary lives in [`src/tags.rs`](https://github.com/ohtf/clincalc/bl
 | `wells_dvt` | Wells Score (DVT) | Clinical pre-test probability of deep vein thrombosis, guiding ultrasound vs D-dimer (NICE NG158). | `emergency`, `vascular` |
 | `wells_pe` | Wells Score for Pulmonary Embolism | Pretest probability of pulmonary embolism, guiding D-dimer vs CTPA (NICE NG158). | `emergency`, `respiratory`, `vascular` |
 | `wilks` | Wilks Score | Historical bodyweight-adjusted powerlifting score for bench press or three-lift total using the IPF-era Wilks coefficient; the IPF replaced Wilks with IPF Points in 2019. | `musculoskeletal` |
+| `dots` | DOTS Score | Bodyweight-adjusted powerlifting score for bench press or three-lift total using the DOTS coefficient, an alternative to the shipped Wilks score. | `musculoskeletal` |
 | `winters_formula` | Winters' Formula | Expected respiratory (PaCO2) compensation for a primary metabolic acidosis, compared against the measured PaCO2. | `acute-medicine`, `nephrology` |
 
 ## Unavailable on principle

@@ -285,6 +285,7 @@ pub const TAGS: &[(&str, &[&str])] = &[
         &["primary-care", "endocrinology", "musculoskeletal"],
     ),
     ("wilks", &["musculoskeletal"]),
+    ("dots", &["musculoskeletal"]),
     ("findrisc", &["primary-care", "endocrinology", "screening"]),
     ("homa_ir", &["endocrinology", "screening"]),
     ("uacr", &["primary-care", "nephrology"]),

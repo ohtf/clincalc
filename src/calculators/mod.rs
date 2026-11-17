@@ -58,6 +58,7 @@ pub mod corrected_sodium;
 pub mod cows;
 pub mod curb65;
 pub mod das28;
+pub mod dots;
 pub mod duke_iscvid;
 pub mod durnin_womersley_skinfold;
 pub mod egfr;

@@ -173,6 +173,7 @@ pub fn all() -> Vec<Box<dyn Calculator>> {
         Box::new(calculators::one_rep_max::OneRepMax),
         Box::new(calculators::protein_target::ProteinTarget),
         Box::new(calculators::wilks::Wilks),
+        Box::new(calculators::dots::Dots),
         Box::new(calculators::fib4::Fib4),
         Box::new(calculators::cha2ds2vasc::Cha2ds2Vasc),
         Box::new(calculators::cha2ds2_va::Cha2ds2Va),
