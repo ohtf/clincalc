@@ -157,11 +157,15 @@ Implemented: the explicit-query/header/configured-default precedence described a
 
 ### MCP
 
-Locale is configured for the MCP server/session and can be overridden by host context. It is not inserted into each calculator's input schema, because locale is representation metadata rather than a clinical input and calculator schemas reject additional properties.
+Implemented: `clincalc mcp --locale <tag>` (or `CLINCALC_LOCALE`) configures a fixed session default, and any `tools/list` or `tools/call` request can override it per call with an explicit `_meta` key, `org.openhealthtechnology.clincalc/locale` (`src/mcp.rs`). The key is namespaced per the MCP spec's reverse-DNS `_meta` convention, since a second label of `modelcontextprotocol`/`mcp` is reserved for the protocol itself. Locale is not inserted into each calculator's input schema, because it is representation metadata rather than a clinical input and calculator schemas reject additional properties.
+
+An explicit per-call override is validated the same way REST validates an explicit `?locale=`: a `tools/call` override must be one of the target calculator's own advertised bundles, and a `tools/list` override must be one of every compiled bundle; either rejects clearly (`INVALID_PARAMS`) rather than silently falling back. Omitting the override falls back to the session default without error, exactly as today: a calculator's own `*_for` methods already fall back to English as a whole when the session locale is not one they advertise.
 
 ### GUI and web
 
 The host resolves one locale for calculator content and UI chrome. Stable result and recommendation codes drive logic and styling; translated labels are never used as control-flow values. HTML declares the resolved BCP 47 language and sets text direction when right-to-left locales are introduced.
+
+Implemented in the desktop GUI: a header locale picker populated from the `compiled_locales` Tauri command (never a hard-coded list), held in `gui/src/locale.ts` as the GUI's one resolved default at its surface boundary - the same role `CLINCALC_LOCALE` plays for the CLI. Every `list_calculators`/`calculate` Tauri call carries the current selection; `App.tsx` sets `document.documentElement.lang`/`dir` from it. No calculator has a non-English bundle yet, so every title, description, and result still falls back to English (`content_locale: "en"`) regardless of the picker's value - the same place every other surface is today.
 
 ## Rollout
 

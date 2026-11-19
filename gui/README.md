@@ -16,9 +16,10 @@ gui/
 │   └── logo.svg           function-variant icon, currentColor for CSS theming
 ├── src/
 │   ├── main.tsx           Mantine theme (teal, Lato)
-│   ├── App.tsx            AppShell + sidebar nav + filter
+│   ├── App.tsx            AppShell + sidebar nav + filter + locale picker
 │   ├── App.css            Thin overrides on top of Mantine
 │   ├── api/calc.ts        Typed wrappers around Tauri invoke
+│   ├── locale.ts          Current-locale store, HTML lang/dir, RTL readiness
 │   └── calculators/
 │       ├── Cha2ds2Vasc.tsx
 │       ├── Curb65.tsx
@@ -35,10 +36,16 @@ gui/
     ├── tauri.conf.json
     ├── capabilities/      Window permissions
     ├── icons/             32/128/256/.ico/.icns (.icns is currently a renamed PNG; needs real iconutil on macOS)
-    └── src/lib.rs         Tauri commands: list_calculators, calculate
+    └── src/lib.rs         Tauri commands: list_calculators, calculate, compiled_locales
 ```
 
 The Tauri backend is a thin wrapper: `list_calculators` enumerates `clincalc::all()` into a `CalcSummary` shape the frontend can render; `calculate` takes a name + JSON input and returns the same `CalculationResponse` shape every surface produces. **No scoring logic lives in the GUI** - everything defers to `clincalc`.
+
+## Locale
+
+The header carries a locale picker (`App.tsx`'s `LocalePicker`), populated from the `compiled_locales` command rather than a hard-coded list. `src/locale.ts` holds the current selection as a plain module-level value - not React state - because `api/calc.ts` reads it from ordinary async functions, not hooks; every `list_calculators`/`calculate` call picks up whichever locale is current when it fires. Components that need to re-render on a change (the picker itself, and `App.tsx`'s effect that sets `document.documentElement.lang`/`dir`) subscribe via the `useLocale()` hook. `textDirectionFor` is ready for a right-to-left bundle the day one is compiled; today `en`/`es`/`ca` are all left-to-right.
+
+No calculator has a non-English translation bundle yet (see `ENG-001.5`/`spec/multilingual.md`), so picking `es` or `ca` today only proves the plumbing: every title, description, and computed result still falls back to English (`content_locale: "en"` in both `CalcSummary` and `CalculationResponse.working`) exactly as the CLI/REST/MCP surfaces already do. This is the GUI closing out `ENG-001.6`, not a translated UI.
 
 ## Adding a calculator UI
 

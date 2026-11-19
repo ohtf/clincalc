@@ -12,11 +12,21 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
+import { getLocale } from "../locale";
+
 /** One catalogue entry (mirrors `CalcSummary` in lib.rs). */
 export interface CalcSummary {
   name: string;
   title: string;
   description: string;
+  /**
+   * The locale this title/description actually render in: the requested
+   * locale when the calculator has a complete bundle for it, otherwise
+   * `"en"`. No calculator ships a non-English bundle yet, so this is
+   * currently always `"en"`, but the field exists so the UI never needs a
+   * day-one change when one does.
+   */
+  content_locale: string;
   tags: string[];
   /** True for confirmed proprietary or licence-locked entries. */
   proprietary: boolean;
@@ -37,7 +47,9 @@ export interface CalculationResponse {
 
 export async function listCalculators(): Promise<CalcSummary[]> {
   try {
-    return await invoke<CalcSummary[]>("list_calculators");
+    return await invoke<CalcSummary[]>("list_calculators", {
+      locale: getLocale(),
+    });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("[calc] list_calculators failed:", err);
@@ -50,7 +62,11 @@ export async function calculate(
   input: Record<string, unknown>,
 ): Promise<CalculationResponse> {
   try {
-    return await invoke<CalculationResponse>("calculate", { name, input });
+    return await invoke<CalculationResponse>("calculate", {
+      name,
+      input,
+      locale: getLocale(),
+    });
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error(
@@ -59,6 +75,17 @@ export async function calculate(
       "error:",
       err,
     );
+    throw err;
+  }
+}
+
+/** Every locale bundle compiled into this build, for the locale picker. */
+export async function compiledLocales(): Promise<string[]> {
+  try {
+    return await invoke<string[]>("compiled_locales");
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[calc] compiled_locales failed:", err);
     throw err;
   }
 }

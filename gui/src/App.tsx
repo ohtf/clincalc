@@ -12,6 +12,7 @@ import {
   Group,
   Loader,
   NavLink,
+  Select,
   Stack,
   Text,
   TextInput,
@@ -20,6 +21,7 @@ import {
 } from "@mantine/core";
 import {
   IconBrandGithub,
+  IconLanguage,
   IconMoon,
   IconSearch,
   IconSun,
@@ -28,10 +30,12 @@ import {
 import logoUrl from "/logo.svg";
 import {
   calculate,
+  compiledLocales,
   listCalculators,
   type CalculationResponse,
   type CalcSummary,
 } from "./api/calc";
+import { localeLabel, setLocale, textDirectionFor, useLocale } from "./locale";
 import { Cha2ds2VascCalculator } from "./calculators/Cha2ds2Vasc";
 import { Curb65Calculator } from "./calculators/Curb65";
 import { FeverPainCalculator } from "./calculators/FeverPain";
@@ -202,7 +206,46 @@ function ColorSchemeToggle() {
   );
 }
 
+/**
+ * The locale picker. Options come from `compiled_locales` rather than a
+ * hard-coded list, so the GUI never drifts from what the engine actually
+ * ships. No calculator advertises a non-English bundle yet, so picking
+ * `es`/`ca` today only changes CLI/REST/MCP-visible metadata that already
+ * falls back to English everywhere here too - this is the plumbing ready
+ * for when a calculator's first reviewed translation lands.
+ */
+function LocalePicker() {
+  const locale = useLocale();
+  const [options, setOptions] = useState<string[]>(["en"]);
+
+  useEffect(() => {
+    compiledLocales()
+      .then(setOptions)
+      .catch(() => {
+        // Keep the English-only default; the catalogue load error (if any)
+        // is already surfaced elsewhere.
+      });
+  }, []);
+
+  if (options.length <= 1) return null;
+
+  return (
+    <Select
+      aria-label="Locale"
+      leftSection={<IconLanguage size={16} />}
+      data={options.map((tag) => ({ value: tag, label: localeLabel(tag) }))}
+      value={locale}
+      onChange={(value) => value && setLocale(value)}
+      size="xs"
+      w={120}
+      allowDeselect={false}
+      comboboxProps={{ withinPortal: true }}
+    />
+  );
+}
+
 export default function App() {
+  const locale = useLocale();
   const [calcs, setCalcs] = useState<CalcSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string>("feverpain");
@@ -213,7 +256,12 @@ export default function App() {
     listCalculators()
       .then(setCalcs)
       .catch((e: unknown) => setError(String(e)));
-  }, []);
+  }, [locale]);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    document.documentElement.dir = textDirectionFor(locale);
+  }, [locale]);
 
   const filtered = (calcs ?? []).filter((c) => {
     if (!query.trim()) return true;
@@ -263,6 +311,7 @@ export default function App() {
             <Brand />
           </Group>
           <Group gap="xs">
+            <LocalePicker />
             <ColorSchemeToggle />
             <ActionIcon
               variant="subtle"

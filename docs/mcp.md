@@ -116,6 +116,24 @@ MCP calls return the same structured `CalculationResponse` shape as the CLI's JS
 
 That shape is intentionally timestamp-free and patient-free. A host that records the calculation should add patient linkage, timestamps, author identity, and audit metadata outside `clincalc`.
 
+## Locale
+
+`clincalc mcp --locale <tag>` (or `CLINCALC_LOCALE`) sets a fixed session default: every tool's title, description, schema, and calculation response use it for the life of the connection, falling back to English as a whole for any calculator that does not advertise it.
+
+Any individual `tools/list` or `tools/call` request can override that default for just that one call, using the request's `_meta` field:
+
+```json
+{
+  "name": "clincalc_feverpain",
+  "arguments": { "fever": true, "purulence": true, "attend_rapidly": true, "inflamed_tonsils": false, "absence_of_cough": false },
+  "_meta": {
+    "org.openhealthtechnology.clincalc/locale": "es"
+  }
+}
+```
+
+An explicit override on `tools/call` must be a locale the target calculator itself advertises; one on `tools/list` must be a compiled locale. Either rejects clearly with a JSON-RPC `INVALID_PARAMS` error rather than silently falling back to a different language - the same rule the REST surface applies to an explicit `?locale=`. No calculator advertises a non-English bundle yet, so the override exists and is tested, but every response still renders in English (`working.content_locale: "en"`) until a calculator's first reviewed translation lands (see `spec/multilingual.md`).
+
 ## Why use MCP instead of the CLI?
 
 The CLI is still the universal surface for humans, shell scripts, and simple agents. MCP adds one specific advantage: **native LLM discoverability**.
