@@ -8,6 +8,8 @@ If you are looking for the architecture and standards behind translation (BCP 47
 
 The dependency-free locale foundation and CLI locale selection are implemented, but no calculator advertises a reviewed non-English locale yet. Generic complete-bundle enforcement (ENG-001.4) is now implemented as the blocking registry test `every_advertised_locale_is_a_complete_bundle` in `src/lib.rs`: a calculator cannot advertise a locale unless its localized schema reaches key parity with English, carries no empty prose, and is visibly translated rather than byte-identical English. Calculator-specific completeness tests remain mandatory - the registry gate covers the metadata and schema-prose layers; computed prose (interpretations and recommendations) needs a valid input per calculator and is still verified by the calculator's own tests, per step 4 of the workflow below.
 
+A first draft exists to review: CURB-65's Spanish bundle (`src/calculators/curb65.rs`), adapted with attribution from MedikQuantis's field labels, with clincalc's own governed definitions and all four computed-prose risk-band branches drafted and tested directly (steps 1-4 below are done). It is intentionally not advertised yet - steps 5 (native-speaker and clinical review) and 6 remain.
+
 ## What gets translated
 
 Three layers, together, per calculator:

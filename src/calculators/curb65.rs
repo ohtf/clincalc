@@ -19,12 +19,19 @@
 //! The urea-free variant CRB-65 (confusion, respiratory rate, blood pressure,
 //! age) is noted in the interpretation as the primary-care alternative when
 //! bloods are unavailable; it is not computed by this calculator.
+//!
+//! A Spanish translation bundle ([`ES`]) is drafted per the rollout in
+//! `spec/multilingual.md` (CURB-65 is the pilot calculator, ENG-001.5), but
+//! is not yet advertised via [`Calculator::supported_locales`] pending
+//! native-speaker and clinical review - see the attribution comment on
+//! [`ES`] and `docs/translating.md`.
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
 use crate::calculator::{CalcError, Calculator};
 use crate::license::CalculatorLicense;
+use crate::locale::SupportedLocale;
 use crate::message::ClinicalMessage;
 use crate::response::CalculationResponse;
 
@@ -90,6 +97,55 @@ const EN: TranslationBundle = TranslationBundle {
     blood_pressure_statement: "A single point for low blood pressure: systolic < 90 mmHg OR diastolic <= 60 mmHg.",
     blood_pressure_caveats: "EITHER limb scores the one point (they are not separate points). Note the thresholds differ: systolic is strictly < 90, diastolic is <= 60.",
     age_description: "Adult age in years (18-120); scores 1 when >= 65 (65)",
+};
+
+/// Spanish bundle - drafted (ENG-001.5), pending native-speaker and clinical
+/// review per `docs/translating.md` before `supported_locales()` advertises
+/// `es`. Until then this bundle is unreachable from the CLI, REST, MCP, and
+/// GUI surfaces, each of which validates an explicit locale against
+/// `supported_locales()` before ever calling into the calculator with it; it
+/// is reachable only via a direct engine call, which is how the tests below
+/// and a reviewer exercise it.
+///
+/// Field labels adapted with attribution from MedikQuantis
+/// (<https://github.com/laurapiro17/medikquantis>, MIT licence, (c) Laura
+/// Piñero Roig), `apps/web/messages/es.json`'s `curb65.fields.*` keys at
+/// upstream commit `16c63c85aee7a64417205f60cb3e66fccf19fae2`. Governed
+/// definitions, caveats, and all computed prose (the four
+/// `render_interpretation_es` branches below) are clincalc's own
+/// independently verified content, not reused from MedikQuantis, whose
+/// CURB-65 mortality table and recommendation thresholds differ from the
+/// BTS 2009 / NICE NG250 basis implemented here.
+///
+/// Translator: drafted by an AI coding agent (Claude) at Marcus Baw's
+/// request, 2026-11-19. Native-speaker and clinical review: not yet
+/// recorded - see ENG-001.5 in `spec/roadmap.md`. Source-English revision:
+/// this commit.
+const ES: TranslationBundle = TranslationBundle {
+    title: "CURB-65: gravedad de la neumonía",
+    description: "Gravedad y riesgo de mortalidad a 30 días en adultos con neumonía adquirida en la comunidad, que orienta el lugar de atención (BTS 2009 / NICE NG250).",
+    confusion_description: "Confusión de nueva aparición (p. ej. AMT <=8 o nueva desorientación) - NO el deterioro cognitivo crónico basal (C)",
+    confusion_concept: "Confusión (C)",
+    confusion_statement: "Confusión mental de nueva aparición, definida operativamente en el estudio original como una puntuación del Abbreviated Mental Test (AMT) de 8 o menos, o nueva desorientación en persona, lugar o tiempo.",
+    confusion_includes: [
+        "AMT <=8 medido en el momento de la presentación",
+        "Nueva desorientación en persona, lugar o tiempo",
+        "Confusión aguda / delirium nuevo respecto al estado basal",
+    ],
+    confusion_excludes: [
+        "El deterioro cognitivo crónico preexistente o la demencia establecida en el estado basal habitual del paciente NO cuenta - la confusión debe ser NUEVA",
+    ],
+    urea_description: "Urea sérica en mmol/L; puntúa 1 cuando es > 7 mmol/L (U)",
+    urea_concept: "Urea (U)",
+    urea_statement: "Una urea sérica superior a 7 mmol/L puntúa 1 punto.",
+    urea_caveats: "TRAMPA DE UNIDADES: el umbral es 7 mmol/L. El equivalente del artículo original es nitrógeno ureico en sangre (BUN) > 19 mg/dL. Son escalas distintas (urea en mmol/L frente a BUN en mg/dL): introduce este valor en mmol/L. Pasar aquí una cifra en mg/dL puntuaría a casi todo el mundo.",
+    respiratory_rate_description: "Frecuencia respiratoria en respiraciones/min; puntúa 1 cuando es >= 30 (R)",
+    systolic_bp_description: "TA sistólica en mmHg; el punto de TA se otorga cuando la sistólica es < 90 O la diastólica es <= 60 (B)",
+    diastolic_bp_description: "TA diastólica en mmHg; el punto de TA se otorga cuando la sistólica es < 90 O la diastólica es <= 60 (B)",
+    blood_pressure_concept: "Presión arterial (B)",
+    blood_pressure_statement: "Un único punto por presión arterial baja: sistólica < 90 mmHg O diastólica <= 60 mmHg.",
+    blood_pressure_caveats: "CUALQUIERA de los dos criterios otorga ese único punto (no son puntos independientes). Ten en cuenta que los umbrales difieren: la sistólica es estrictamente < 90, la diastólica es <= 60.",
+    age_description: "Edad adulta en años (18-120); puntúa 1 cuando es >= 65 (65)",
 };
 
 /// CURB-65 inputs. The five scoring criteria are derived from raw observations.
@@ -203,6 +259,28 @@ fn render_interpretation(score: u8, risk_band: RiskBand, mortality_tenths: u16) 
     }
 }
 
+/// Spanish computed prose - clincalc's own content (see the attribution
+/// comment on [`ES`]), not reused from MedikQuantis. Drafted pending review
+/// (ENG-001.5); kept in sync with [`render_interpretation`] by the parallel
+/// branch structure.
+fn render_interpretation_es(score: u8, risk_band: RiskBand, mortality_tenths: u16) -> String {
+    let mortality = mortality_text(mortality_tenths);
+    match (risk_band, score >= 4) {
+        (RiskBand::Low, _) => format!(
+            "Puntuación {score}: gravedad baja (mortalidad aproximada a 30 días del {mortality} para puntuaciones 0-1 en el grupo de derivación de Lim). Si es clínicamente adecuado, considerar el alta domiciliaria o servicios liderados por atención primaria con medidas de seguridad (safety-netting) (NICE NG250)."
+        ),
+        (RiskBand::Intermediate, _) => format!(
+            "Puntuación {score}: gravedad intermedia (mortalidad aproximada a 30 días del {mortality} en el grupo de derivación de Lim). Considerar un hospital virtual, atención de urgencias en el mismo día, hospitalización a domicilio o ingreso hospitalario (NICE NG250)."
+        ),
+        (RiskBand::High, false) => format!(
+            "Puntuación {score}: gravedad alta (mortalidad aproximada a 30 días del {mortality} para puntuaciones 3-5 en el grupo de derivación de Lim). Proporcionar ingreso hospitalario y derivar a cuidados intensivos si procede (NICE NG250). Cuando no se dispone de analítica, puede usarse el CRB-65 (la variante sin urea) en atención primaria."
+        ),
+        (RiskBand::High, true) => format!(
+            "Puntuación {score}: gravedad alta (mortalidad aproximada a 30 días del {mortality} para puntuaciones 3-5 en el grupo de derivación de Lim). Proporcionar ingreso hospitalario y derivar a cuidados intensivos si procede (NICE NG250). Con una puntuación de 4-5, valorar específicamente el traslado a cuidados intensivos (BTS 2009). Cuando no se dispone de analítica, puede usarse el CRB-65 (la variante sin urea) en atención primaria."
+        ),
+    }
+}
+
 /// Pure scoring.
 pub fn compute(input: &Curb65Input) -> Result<Curb65Outcome, CalcError> {
     if !(18..=120).contains(&input.age) {
@@ -265,6 +343,20 @@ pub fn compute(input: &Curb65Input) -> Result<Curb65Outcome, CalcError> {
 
 /// Build the dispatchable [`CalculationResponse`] from typed inputs.
 pub fn build_response(input: &Curb65Input) -> Result<CalculationResponse, CalcError> {
+    let mut response = build_response_for(input, SupportedLocale::En)?;
+    // `calculate()`'s contract predates `content_locale` and never reports
+    // it; only the `*_for` surface does (see `calculate_for` below).
+    response.working.remove("content_locale");
+    Ok(response)
+}
+
+/// Build the dispatchable [`CalculationResponse`] with prose in `locale`.
+/// English for any locale without a drafted bundle (currently everything
+/// except `es`, and `es` itself until it is advertised - see [`ES`]).
+pub fn build_response_for(
+    input: &Curb65Input,
+    locale: SupportedLocale,
+) -> Result<CalculationResponse, CalcError> {
     let o = compute(input)?;
     let mortality_tenths_percent = mortality_tenths_percent(o.score);
     let mortality_percent = f64::from(mortality_tenths_percent) / 10.0;
@@ -297,17 +389,29 @@ pub fn build_response(input: &Curb65Input) -> Result<CalculationResponse, CalcEr
         "interpretation_message".into(),
         serde_json::to_value(message).expect("ClinicalMessage is serializable"),
     );
+    working.insert("content_locale".into(), json!(locale.as_bcp47()));
+
+    let interpretation = match locale {
+        SupportedLocale::Es => {
+            render_interpretation_es(o.score, o.risk_band, mortality_tenths_percent)
+        }
+        _ => render_interpretation(o.score, o.risk_band, mortality_tenths_percent),
+    };
+
     Ok(CalculationResponse {
         calculator: NAME.to_string(),
         result: json!(o.score),
-        interpretation: render_interpretation(o.score, o.risk_band, mortality_tenths_percent),
+        interpretation,
         working,
         reference: REFERENCE.to_string(),
     })
 }
 
 fn input_schema() -> Value {
-    let text = &EN;
+    input_schema_with(&EN)
+}
+
+fn input_schema_with(text: &TranslationBundle) -> Value {
     json!({
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "Curb65Input",
@@ -397,8 +501,22 @@ impl Calculator for Curb65 {
         EN.title
     }
 
+    fn title_for(&self, locale: SupportedLocale) -> &'static str {
+        match locale {
+            SupportedLocale::Es => ES.title,
+            _ => EN.title,
+        }
+    }
+
     fn description(&self) -> &'static str {
         EN.description
+    }
+
+    fn description_for(&self, locale: SupportedLocale) -> &'static str {
+        match locale {
+            SupportedLocale::Es => ES.description,
+            _ => EN.description,
+        }
     }
 
     fn reference(&self) -> &'static str {
@@ -413,10 +531,27 @@ impl Calculator for Curb65 {
         input_schema()
     }
 
+    fn input_schema_for(&self, locale: SupportedLocale) -> Value {
+        match locale {
+            SupportedLocale::Es => input_schema_with(&ES),
+            _ => input_schema(),
+        }
+    }
+
     fn calculate(&self, input: &Value) -> Result<CalculationResponse, CalcError> {
         let parsed: Curb65Input = serde_json::from_value(input.clone())
             .map_err(|e| CalcError::InvalidInput(e.to_string()))?;
         build_response(&parsed)
+    }
+
+    fn calculate_for(
+        &self,
+        input: &Value,
+        locale: SupportedLocale,
+    ) -> Result<CalculationResponse, CalcError> {
+        let parsed: Curb65Input = serde_json::from_value(input.clone())
+            .map_err(|e| CalcError::InvalidInput(e.to_string()))?;
+        build_response_for(&parsed, locale)
     }
 }
 
@@ -663,15 +798,177 @@ mod tests {
     }
 
     #[test]
-    fn unreviewed_translations_are_not_advertised() {
+    fn spanish_translation_is_drafted_but_not_yet_advertised() {
+        // supported_locales() is the actual gate every surface checks (CLI,
+        // REST, MCP, the desktop GUI) before ever passing an unreviewed
+        // locale through to a calculator - see "Native-speaker and clinical
+        // review" in docs/translating.md. The Spanish bundle below is
+        // drafted and exercised directly by the tests in this module so it
+        // is ready the day that review is recorded; it is deliberately not
+        // listed here yet.
         assert_eq!(Curb65.supported_locales(), crate::locale::ENGLISH_ONLY);
+    }
+
+    #[test]
+    fn catalan_has_no_draft_yet_and_falls_back_whole() {
+        assert_eq!(Curb65.title_for(SupportedLocale::Ca), Curb65.title());
         assert_eq!(
-            Curb65.title_for(crate::locale::SupportedLocale::Es),
-            Curb65.title()
-        );
-        assert_eq!(
-            Curb65.input_schema_for(crate::locale::SupportedLocale::Ca),
+            Curb65.input_schema_for(SupportedLocale::Ca),
             Curb65.input_schema()
         );
+    }
+
+    #[test]
+    fn spanish_metadata_is_translated() {
+        assert_eq!(Curb65.title_for(SupportedLocale::Es), ES.title);
+        assert_eq!(Curb65.description_for(SupportedLocale::Es), ES.description);
+        assert_ne!(Curb65.title_for(SupportedLocale::Es), Curb65.title());
+        assert_ne!(
+            Curb65.description_for(SupportedLocale::Es),
+            Curb65.description()
+        );
+    }
+
+    #[test]
+    fn spanish_schema_is_at_key_parity_with_english_and_visibly_translated() {
+        let english = Curb65.input_schema();
+        let spanish = Curb65.input_schema_for(SupportedLocale::Es);
+        let issues = crate::translation::parity_issues(&english, &spanish);
+        assert!(issues.is_empty(), "parity issues: {issues:?}");
+        assert_ne!(english, spanish);
+    }
+
+    #[test]
+    fn spanish_urea_definition_flags_the_same_unit_trap() {
+        let schema = Curb65.input_schema_for(SupportedLocale::Es);
+        let caveats = schema["properties"]["urea_mmol_l"]["definition"]["caveats"]
+            .as_str()
+            .unwrap();
+        assert!(caveats.contains("mmol/L"));
+        assert!(caveats.to_lowercase().contains("mg/dl"));
+    }
+
+    #[test]
+    fn spanish_confusion_definition_requires_new_onset() {
+        let schema = Curb65.input_schema_for(SupportedLocale::Es);
+        let excludes = &schema["properties"]["confusion"]["definition"]["excludes"];
+        assert!(excludes[0].as_str().unwrap().contains("NUEVA"));
+    }
+
+    #[test]
+    fn spanish_definitions_keep_the_source_citation_and_snomed_ecl_unchanged() {
+        // Source citations, URLs, SNOMED ECL, and status are reference data,
+        // not prose - they must stay byte-identical across locales.
+        let english = Curb65.input_schema();
+        let spanish = Curb65.input_schema_for(SupportedLocale::Es);
+        for property in ["confusion", "urea_mmol_l", "systolic_bp", "diastolic_bp"] {
+            assert_eq!(
+                english["properties"][property]["definition"]["source"],
+                spanish["properties"][property]["definition"]["source"],
+                "{property}: source citation must not change by locale"
+            );
+            assert_eq!(
+                english["properties"][property]["definition"]["snomedEcl"],
+                spanish["properties"][property]["definition"]["snomedEcl"],
+                "{property}: snomedEcl must not change by locale"
+            );
+            assert_eq!(
+                english["properties"][property]["definition"]["status"],
+                spanish["properties"][property]["definition"]["status"],
+                "{property}: status must not change by locale"
+            );
+        }
+    }
+
+    /// "Running real calculations in the locale" (docs/translating.md) for
+    /// every risk band, the completeness check the generic registry gate
+    /// cannot perform because it has no valid input per calculator.
+    #[test]
+    fn spanish_computed_prose_covers_every_risk_band() {
+        let low = well();
+        let mut intermediate = well(); // age + urea = 2
+        intermediate.age = 70;
+        intermediate.urea_mmol_l = 9.0;
+        let mut high = well(); // age + urea + RR = 3
+        high.age = 70;
+        high.urea_mmol_l = 9.0;
+        high.respiratory_rate = 32.0;
+        let mut high_with_critical_care_assessment = well(); // + low BP = 4
+        high_with_critical_care_assessment.age = 70;
+        high_with_critical_care_assessment.urea_mmol_l = 9.0;
+        high_with_critical_care_assessment.respiratory_rate = 32.0;
+        high_with_critical_care_assessment.systolic_bp = 80.0;
+
+        let cases = [
+            (low, "gravedad baja", "NICE NG250"),
+            (intermediate, "gravedad intermedia", "NICE NG250"),
+            (high, "gravedad alta", "cuidados intensivos si procede"),
+            (
+                high_with_critical_care_assessment,
+                "valorar específicamente el traslado a cuidados intensivos",
+                "BTS 2009",
+            ),
+        ];
+        for (input, expect_a, expect_b) in cases {
+            let response = build_response_for(&input, SupportedLocale::Es).unwrap();
+            assert!(
+                response.interpretation.contains(expect_a),
+                "got: {}",
+                response.interpretation
+            );
+            assert!(
+                response.interpretation.contains(expect_b),
+                "got: {}",
+                response.interpretation
+            );
+            assert_eq!(response.working["content_locale"], json!("es"));
+            // Machine fields are identical across locales by construction.
+            let english = build_response_for(&input, SupportedLocale::En).unwrap();
+            assert_eq!(response.result, english.result);
+            assert_eq!(response.working["risk_band"], english.working["risk_band"]);
+            assert_eq!(
+                response.working["recommendation_code"],
+                english.working["recommendation_code"]
+            );
+            assert_eq!(
+                response.working["interpretation_message"],
+                english.working["interpretation_message"]
+            );
+        }
+    }
+
+    #[test]
+    fn calculate_for_dispatches_to_the_spanish_bundle() {
+        let value = json!({
+            "confusion": false,
+            "urea_mmol_l": 9.0,
+            "respiratory_rate": 32.0,
+            "systolic_bp": 110.0,
+            "diastolic_bp": 70.0,
+            "age": 72
+        });
+        let dynamic = Curb65.calculate_for(&value, SupportedLocale::Es).unwrap();
+        let typed = build_response_for(
+            &Curb65Input {
+                confusion: false,
+                urea_mmol_l: 9.0,
+                respiratory_rate: 32.0,
+                systolic_bp: 110.0,
+                diastolic_bp: 70.0,
+                age: 72,
+            },
+            SupportedLocale::Es,
+        )
+        .unwrap();
+        assert_eq!(dynamic, typed);
+        assert_eq!(dynamic.working["content_locale"], json!("es"));
+    }
+
+    #[test]
+    fn calculate_still_reports_no_content_locale_key() {
+        // The plain English-compatibility `calculate()` predates
+        // `content_locale` and must keep its existing working-map shape.
+        let response = build_response(&well()).unwrap();
+        assert!(!response.working.contains_key("content_locale"));
     }
 }
