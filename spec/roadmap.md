@@ -285,9 +285,13 @@ Status: Future
 - [ ] **COLL-002.2 Offer co-maintainership** of clincalc and credit for the Catalan/Spanish translation seed data (ENG-002).
 - [ ] **COLL-002.3 Migrate overlapping translations** into clincalc's structured translation bundles once ENG-001 establishes the CURB-65 pattern.
 - [ ] **COLL-002.4 Keep MedikQuantis running** as a sibling consumer / demonstrator until the transition is seamless.
+- [ ] **COLL-002.5 Agree the licence position with Laura in writing.** MedikQuantis is MIT-licensed and, as of 2026-11-20, Laura Piñero Roig wrote all of its commits, so she holds the whole copyright. MIT code can enter clincalc's AGPL/LGPL codebase as long as her copyright and the MIT notice are kept (`LICENSES/MIT.txt` already exists). The reverse is not possible without relicensing, so merging means folding MedikQuantis into clincalc. Record her agreement that her code and strings continue under clincalc's licences, with DCO sign-off on her future commits.
+- [ ] **COLL-002.6 Cross-check every overlapping calculator automatically.** Build a differential harness that runs the same input vectors through clincalc and the pinned MedikQuantis package for every calculator both projects ship, not only CHA₂DS₂-VASc. Record each difference as a bug in one project or an intentional interpretation or guideline difference, in the calculator's spec. Re-run it whenever the upstream snapshot in [`calculator-roadmap.md`](calculator-roadmap.md#medikquantis-parity-gaps) is refreshed.
+- [ ] **COLL-002.7 Reach surface parity before retiring anything.** MedikQuantis users currently get a Catalan/Spanish/English web interface, a free REST API, an MCP server and SMART on FHIR launch. The merged clincalc needs each of these, ideally with the multilingual interface driven by the Rust engine through WebAssembly (`ENG-003.1`) and SMART on FHIR as a new launch path for the web surface.
+- [ ] **COLL-002.8 Plan the medikquantis.me domain.** Once `COLL-002.7` is met, redirect medikquantis.me (including its `/ca`, `/es` and `/en` paths and any public API URLs) to the matching clincalc surface, after agreeing with Laura whether she keeps the domain or transfers it to OHTF.
+- [ ] **COLL-002.9 Keep citation continuity.** MedikQuantis's Zenodo DOI stays as the citable record of its earlier versions. Link it from clincalc's software citation metadata (with `ENG-011.3`) and its README, so papers that cite MedikQuantis still lead to the maintained code.
 
 Open questions for comment:
-- What governance / licence questions need to be resolved for MedikQuantis code/strings to move into the AGPL clincalc repo?
 - Should we set up a shared chat channel or regular sync for the collaboration?
 
 ---
