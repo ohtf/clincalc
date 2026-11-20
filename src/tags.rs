@@ -317,6 +317,10 @@ pub const TAGS: &[(&str, &[&str])] = &[
     ("psa_density", &["urology", "oncology"]),
     ("npi", &["oncology", "prognostic"]),
     ("binet", &["oncology", "severity", "prognostic"]),
+    ("rai", &["oncology", "severity", "prognostic"]),
+    ("ipi", &["oncology", "haematology", "prognostic"]),
+    ("iss_myeloma", &["oncology", "haematology", "prognostic"]),
+    ("r_iss_myeloma", &["oncology", "haematology", "prognostic"]),
     ("khorana", &["oncology", "haematology", "risk"]),
     // ---- Surgery / trauma / pressure injury ----
     (

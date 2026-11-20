@@ -197,7 +197,9 @@ This table tracks every functioning calculation. `✓` means the language is ava
 | `holliday_segar` | ✓ | - | - | ✓ |
 | `homa_ir` | ✓ | - | - | ✓ |
 | `ideal_body_weight` | ✓ | - | - | ✓ |
+| `ipi` | ✓ | - | - | ✓ |
 | `ipss` | ✓ | - | - | ✓ |
+| `iss_myeloma` | ✓ | - | - | ✓ |
 | `isth_overt_dic` | ✓ | - | - | ✓ |
 | `jackson_pollock_skinfold` | ✓ | - | - | ✓ |
 | `khorana` | ✓ | - | - | ✓ |
@@ -240,6 +242,8 @@ This table tracks every functioning calculation. `✓` means the language is ava
 | `qrisk3` | ✓ | - | - | ✓ |
 | `qsofa` | ✓ | - | - | ✓ |
 | `qtc` | ✓ | - | - | ✓ |
+| `r_iss_myeloma` | ✓ | - | - | ✓ |
+| `rai` | ✓ | - | - | ✓ |
 | `ranson` | ✓ | - | - | ✓ |
 | `rass` | ✓ | - | - | ✓ |
 | `rcri` | ✓ | - | - | ✓ |
@@ -266,7 +270,7 @@ This table tracks every functioning calculation. `✓` means the language is ava
 
 ### Unavailable tools are named, not hidden
 
-The registry contains 150 active calculators and 14 named-but-unavailable entries, for 164 entries in total. Eleven cannot be shipped because they are proprietary or licence-locked: FRAX, MMSE, ELF, ACQ, the Oxford Hip/Knee Scores, CAT, MUST, CFS, LANSS, and SCORAD. Norton and SCORE2 / SCORE2-OP are separately withheld pending permission or legal review because unrestricted software-redistribution rights have not been established; they are not labelled proprietary. Rather than omit these gaps silently, each is registered with its precise unavailable reason and alternatives:
+The registry contains 154 active calculators and 14 named-but-unavailable entries, for 168 entries in total. Eleven cannot be shipped because they are proprietary or licence-locked: FRAX, MMSE, ELF, ACQ, the Oxford Hip/Knee Scores, CAT, MUST, CFS, LANSS, and SCORAD. Norton and SCORE2 / SCORE2-OP are separately withheld pending permission or legal review because unrestricted software-redistribution rights have not been established; they are not labelled proprietary. Rather than omit these gaps silently, each is registered with its precise unavailable reason and alternatives:
 
 ```console
 $ clincalc calc frax --input '{}'
