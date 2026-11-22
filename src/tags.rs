@@ -332,6 +332,7 @@ pub const TAGS: &[(&str, &[&str])] = &[
     ("barthel", &["geriatrics", "severity"]),
     ("waterlow", &["acute-medicine", "geriatrics", "screening"]),
     ("braden", &["acute-medicine", "geriatrics", "screening"]),
+    ("acmi", &["primary-care", "geriatrics", "screening", "risk"]),
     // ---- Respiratory / COPD ----
     ("bode", &["respiratory", "prognostic"]),
     // ---- Paediatrics ----

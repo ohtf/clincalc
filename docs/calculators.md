@@ -1,6 +1,6 @@
 # Calculator catalogue
 
-The full registry: 168 entries comprising 154 active calculators that compute a real result, 11 named-but-unavailable rights-locked stubs (carrying `proprietary` and `unavailable`), two rights-review stubs, and one clinical-safety stub (the latter three carry `unavailable` without `proprietary`). One row per calculator.
+The full registry: 169 entries comprising 155 active calculators that compute a real result, 11 named-but-unavailable rights-locked stubs (carrying `proprietary` and `unavailable`), two rights-review stubs, and one clinical-safety stub (the latter three carry `unavailable` without `proprietary`). One row per calculator.
 
 `clincalc list` prints the same data at any time; `clincalc list --tag <tag>` filters by tag; `clincalc calc <name> --license` prints the algorithm's distribution licence for any single entry.
 
@@ -29,6 +29,7 @@ The full vocabulary lives in [`src/tags.rs`](https://github.com/ohtf/clincalc/bl
 | `aa_gradient` | Alveolar-arterial (A-a) Gradient | Alveolar-arterial oxygen gradient from the alveolar gas equation, with the age-adjusted expected room-air gradient. | `respiratory`, `acute-medicine` |
 | `abcd2` | ABCD2 Score (Stroke Risk after TIA) | 2-day stroke risk after a transient ischaemic attack. Note NICE NG128 advises against using ABCD2 to guide referral urgency. | `neurology`, `emergency`, `risk` |
 | `abpi` | ABPI (Ankle-Brachial Pressure Index) | Ankle-Brachial Pressure Index per leg from ankle and brachial systolic pressures; screens for peripheral arterial disease and informs compression-therapy safety. | `primary-care`, `vascular` |
+| `acmi` | Anticholinergic Medication Index (ACMI) | Cumulative anticholinergic burden (0-100) from current prescriptions, weighted by a clinical prediction model for falls and delirium in adults aged over 65 (Best et al, BMJ Medicine 2026). | `primary-care`, `geriatrics`, `screening`, `risk` |
 | `acq` | ACQ (Asthma Control Questionnaire) | Asthma control monitoring (BTS/NICE/SIGN asthma). | `respiratory`, `severity`, `proprietary`, `unavailable` |
 | `ag_ratio` | Albumin/Globulin (A/G) Ratio | Albumin/globulin ratio from total protein and albumin, for liver, kidney, and paraprotein screening. | `acute-medicine`, `hepatology` |
 | `alcohol_units` | Alcohol Units (UK) | Calculates UK alcohol units from drink volume and ABV, with optional weekly tally and alcohol kcal. | `primary-care`, `mental-health` |

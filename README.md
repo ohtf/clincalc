@@ -116,6 +116,7 @@ This table tracks every functioning calculation. `✓` means the language is ava
 | `aa_gradient` | ✓ | - | - | ✓ |
 | `abcd2` | ✓ | - | - | ✓ |
 | `abpi` | ✓ | - | - | ✓ |
+| `acmi` | ✓ | - | - | ✓ |
 | `ag_ratio` | ✓ | - | - | ✓ |
 | `alcohol_units` | ✓ | - | - | ✓ |
 | `alvarado` | ✓ | - | - | ✓ |
@@ -270,7 +271,7 @@ This table tracks every functioning calculation. `✓` means the language is ava
 
 ### Unavailable tools are named, not hidden
 
-The registry contains 154 active calculators and 14 named-but-unavailable entries, for 168 entries in total. Eleven cannot be shipped because they are proprietary or licence-locked: FRAX, MMSE, ELF, ACQ, the Oxford Hip/Knee Scores, CAT, MUST, CFS, LANSS, and SCORAD. Norton and SCORE2 / SCORE2-OP are separately withheld pending permission or legal review because unrestricted software-redistribution rights have not been established; they are not labelled proprietary. Rather than omit these gaps silently, each is registered with its precise unavailable reason and alternatives:
+The registry contains 155 active calculators and 14 named-but-unavailable entries, for 169 entries in total. Eleven cannot be shipped because they are proprietary or licence-locked: FRAX, MMSE, ELF, ACQ, the Oxford Hip/Knee Scores, CAT, MUST, CFS, LANSS, and SCORAD. Norton and SCORE2 / SCORE2-OP are separately withheld pending permission or legal review because unrestricted software-redistribution rights have not been established; they are not labelled proprietary. Rather than omit these gaps silently, each is registered with its precise unavailable reason and alternatives:
 
 ```console
 $ clincalc calc frax --input '{}'

@@ -11,6 +11,7 @@
 pub mod aa_gradient;
 pub mod abcd2;
 pub mod abpi;
+pub mod acmi;
 pub mod ag_ratio;
 pub mod alcohol_units;
 pub mod alvarado;

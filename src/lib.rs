@@ -192,6 +192,7 @@ pub fn all() -> Vec<Box<dyn Calculator>> {
         Box::new(calculators::ipss::Ipss),
         Box::new(calculators::isth_overt_dic::IsthOvertDic),
         Box::new(calculators::amts::Amts),
+        Box::new(calculators::acmi::Acmi),
         Box::new(calculators::barthel::Barthel),
         Box::new(calculators::mrc_dyspnoea::MrcDyspnoea),
         Box::new(calculators::news2::News2),
