@@ -46,6 +46,20 @@ The CLI surface (one shape for the whole registry) is documented in [`docs/cli-r
 
 For anything happening in a GUI - Tauri desktop, React frontend, `clincalc-web`, or docs UI - Playwright is essential. Reproduce with Playwright, inspect the DOM, console, and network requests, and only then patch the code. A typecheck or build alone is not enough evidence for GUI bugs.
 
+## SNOMED CT lookups
+
+Governed input definitions (`spec/calculator-input-definitions.md`) cite SNOMED CT concepts and ECL expressions. **Never guess or recall a SNOMED concept ID from memory** - a plausible-looking but wrong ID is exactly the silent, well-formatted failure mode that spec is designed to prevent. Verify every one locally with `sct`, a local-first SNOMED CT toolchain installed at `~/.cargo/bin/sct` with both a CLI and an `sct mcp` stdio MCP server (the server `spec/calculator-input-definitions.md`'s "Then" rollout step already anticipates).
+
+Useful commands:
+
+- `sct lexical "<term>"` - keyword search for a candidate concept (add `--format json` for scripting).
+- `sct lookup <SCTID>` - full concept detail: parents, attributes, reference-set membership, CTV3/Read2 codes.
+- `sct ecl "<expression>"` - evaluate an ECL expression and list matching concepts, to sanity-check a `snomedEcl` definition before committing it.
+- `sct refset members <refset-id>` - inspect a reference set; the NHS dm+d ingredient simple reference set (`999000791000001109`) is the authoritative source for medication substance-level concepts, useful whenever a calculator's input is "is the patient on drug X".
+- `sct codelist` (alias `valueset`) - build, validate, diff, and export a governed `.codelist` file when a definition needs more than a handful of concepts.
+
+Run `sct paths` to see which SNOMED CT edition is loaded, and `sct info <db>` for its release date; record that date when citing a concept for reproducibility, since the local edition can lag the current UK monthly release by about a month.
+
 ## House style
 
 - Hyphens, not emdashes, in prose. Slug-case-with-hyphens for filenames (except recognised conventions like `README.md`, `AGENTS.md`, `Cargo.toml`).

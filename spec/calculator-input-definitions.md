@@ -80,7 +80,7 @@ Every value in the score becomes traceable to a concept and a governed definitio
 
 1. **Now** - establish the `definition` shape (this document) and embed definitions in the schemas of the calculators being built, starting with the simple cases (recall period and scoring anchors for the questionnaires, the PHQ-9 item-9 safety item). The delivery mechanism (schema -> `--schema` -> MCP -> docs) is proven by these.
 2. **Next** - apply the full `includes` / `excludes` / `snomedEcl` treatment when the boolean-criteria scores land (CHA2DS2-VASc is the motivating case and the natural flagship; QRISK3 and HAS-BLED follow). These are where `excludes` and ECL earn their keep.
-3. **Then** - the `--define` CLI pretty-printer, generated docs tables, the web popovers, and a deterministic ECL evaluator against a local SNOMED subset (reusing the `sct` MCP server already planned in `spec/DESIGN.md`).
+3. **Then** - the `--define` CLI pretty-printer, generated docs tables, the web popovers, and a deterministic ECL evaluator against a local SNOMED subset (reusing the `sct` CLI/MCP server; see `AGENTS.md`'s "SNOMED CT lookups" section for the tool itself, already used to verify concept IDs by hand during authoring).
 4. **Later** - governance workflow (review to move `draft` -> `reviewed` -> `endorsed`), and submission of mature ECL expressions as candidate refsets.
 
 ## Open questions
