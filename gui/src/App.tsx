@@ -36,6 +36,7 @@ import {
   type CalcSummary,
 } from "./api/calc";
 import { localeLabel, setLocale, textDirectionFor, useLocale } from "./locale";
+import { AcmiCalculator } from "./calculators/Acmi";
 import { Cha2ds2VascCalculator } from "./calculators/Cha2ds2Vasc";
 import { Curb65Calculator } from "./calculators/Curb65";
 import { FeverPainCalculator } from "./calculators/FeverPain";
@@ -56,6 +57,7 @@ import { WellsPeCalculator } from "./calculators/WellsPe";
 const IMPLEMENTED: Record<string, () => ReactElement> = {
   feverpain: FeverPainCalculator,
   cha2ds2vasc: Cha2ds2VascCalculator,
+  acmi: AcmiCalculator,
   qrisk3: Qrisk3Calculator,
   gcs: GcsCalculator,
   curb65: Curb65Calculator,
