@@ -1,0 +1,120 @@
+---
+id: acmi-medications
+title: ACMI medications (Best et al, BMJ Medicine 2026)
+description: The 88 anticholinergic medications scored by the Anticholinergic Medication Index (ACMI), bound to their SNOMED CT ingredient-level substance concepts from the NHS dm+d ingredient simple reference set (999000791000001109), for clincalc's acmi calculator. Isosorbide is listed in the primary source without specifying an ester; both mononitrate and dinitrate are included pending disambiguation - see the comment below.
+terminology: SNOMED CT
+created: 2026-11-22
+updated: 2026-11-22
+version: 1
+status: draft
+licence: CC-BY-SA-4.0
+copyright: Copyright 2026 Marcus Baw and Baw Medical Ltd. SNOMED CT content © IHTSDO, used under NHS England national licence.
+appropriate_use: Identifying whether a patient has a current prescription for one of the 88 medications scored by the ACMI (clincalc's `acmi` calculator), for the purpose of calculating cumulative anticholinergic burden.
+misuse: "Not validated for any dose-, route-, or formulation-specific distinction - the ACMI's own model treats any use of these substances as binary. Not a general-purpose anticholinergic medication list - it is exactly the 88 medications in Table 3 of Best et al 2026, no more and no fewer, so it will under-count anticholinergic burden from any medication outside that list."
+snomed_release: 2026-09-23
+authors:
+- name: clincalc (https://github.com/ohtf/clincalc)
+  role: author
+warnings:
+- code: not-universal-definition
+  severity: info
+  message: This codelist was developed for a specific purpose and may not meet the needs of other studies.
+- code: draft-not-reviewed
+  severity: info
+  message: This codelist has not yet been reviewed. Check status before use.
+- code: snomed-release-age
+  severity: caution
+  message: Validate against the current SNOMED release before use in research.
+---
+
+# concepts
+
+418483003      Alverine  # Alverine
+372763006      Amantadine  # Amantadine
+391761004      Amisulpride  # Amisulpride
+372726002      Amitriptyline  # Amitriptyline
+406784005      Aripiprazole  # Aripiprazole
+387506000      Atenolol  # Atenolol
+372832002      Atropine  # Atropine
+387342009      Baclofen  # Baclofen
+387520007      Bendroflumethiazide  # Bendroflumethiazide
+116571008      Betamethasone  # Betamethasone
+387498005      Bumetanide  # Bumetanide
+387173000      Buprenorphine  # Buprenorphine
+387160004      Captopril  # Captopril
+387222003      Carbamazepine  # Carbamazepine
+372523007      Cetirizine  # Cetirizine
+372914003      Chlorphenamine  # Chlorphenamine
+387258005      Chlorpromazine  # Chlorpromazine
+373541007      Cimetidine  # Cimetidine
+395955001      Cinnarizine  # Cinnarizine
+372596005      Citalopram  # Citalopram
+372903001      Clomipramine  # Clomipramine
+387383007      Clonazepam  # Clonazepam
+372805007      Clonidine  # Clonidine
+387494007      Codeine  # Codeine
+387413002      Colchicine  # Colchicine
+387491004      Cyclizine  # Cyclizine
+416140008      Darifenacin  # Darifenacin
+396015008      Desloratadine  # Desloratadine
+372584003      Dexamethasone  # Dexamethasone
+387264003      Diazepam  # Diazepam
+387461009      Digoxin  # Digoxin
+387322000      Dihydrocodeine  # Dihydrocodeine
+387371005      Dipyridamole  # Dipyridamole
+414047005      Dosulepin  # Dosulepin
+372508002      Doxazosin  # Doxazosin
+400447003      Escitalopram  # Escitalopram
+373492002      Fentanyl  # Fentanyl
+432255001      Fesoterodine  # Fesoterodine
+372522002      Fexofenadine  # Fexofenadine
+372767007      Fluoxetine  # Fluoxetine
+387567006      Flupentixol  # Flupentixol
+387475002      Furosemide  # Furosemide
+387122008      Glycopyrronium bromide  # Glycopyrronium bromide
+386837002      Haloperidol  # Haloperidol
+387125005      Hydralazine  # Hydralazine
+387525002      Hydrochlorothiazide  # Hydrochlorothiazide
+396458002      Hydrocortisone  # Hydrocortisone
+372856003      Hydroxyzine  # Hydroxyzine
+387409009      Hyoscine  # Hyoscine
+372718005      Imipramine  # Imipramine
+387419003      Indapamide  # Indapamide
+395748009      Indoramin  # Indoramin
+372518007      Ipratropium  # Ipratropium
+387040009      Loperamide  # Loperamide
+386884002      Loratadine  # Loratadine
+387106007      Lorazepam  # Lorazepam
+419830007      Mebeverine  # Mebeverine
+372826007      Metoprolol  # Metoprolol
+373476007      Midazolam  # Midazolam
+386847004      Mirtazapine  # Mirtazapine
+373529000      Morphine  # Morphine
+419768004      Nefopam  # Nefopam
+387490003      Nifedipine  # Nifedipine
+372652004      Nortriptyline  # Nortriptyline
+386849001      Olanzapine  # Olanzapine
+372717000      Oxybutynin  # Oxybutynin
+55452001       Oxycodone  # Oxycodone
+372595009      Paroxetine  # Paroxetine
+116601002      Prednisolone  # Prednisolone
+372853006      Prochlorperazine  # Prochlorperazine
+387247001      Procyclidine  # Procyclidine
+372871004      Promethazine  # Promethazine
+386850001      Quetiapine  # Quetiapine
+372755005      Ranitidine  # Ranitidine
+386840002      Risperidone  # Risperidone
+407030007      Solifenacin  # Solifenacin
+387300007      Temazepam  # Temazepam
+372810006      Theophylline  # Theophylline
+425812008      Tiotropium bromide  # Tiotropium bromide
+372570008      Tolterodine  # Tolterodine
+386858008      Tramadol  # Tramadol
+372829000      Trazodone  # Trazodone
+387120000      Trihexyphenidyl  # Trihexyphenidyl
+326557004      Trospium chloride  # Trospium chloride
+706898002      Umeclidinium  # Umeclidinium
+372490001      Venlafaxine  # Venlafaxine
+372756006      Warfarin  # Warfarin
+386854005      Isosorbide mononitrate  # Isosorbide (mononitrate ester - primary source does not specify)
+387332007      Isosorbide dinitrate  # Isosorbide (dinitrate ester - primary source does not specify)

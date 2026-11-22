@@ -330,6 +330,107 @@ impl Medication {
         }
     }
 
+    /// SNOMED CT substance concept SCTID(s) for this medication, verified
+    /// against the NHS dm+d ingredient simple reference set
+    /// (999000791000001109) with `sct` (see `AGENTS.md`). Almost every
+    /// medication maps to exactly one concept; `Isosorbide` is the one
+    /// exception, because the primary source lists it without specifying an
+    /// ester, so both the mononitrate and dinitrate concepts are listed
+    /// pending disambiguation. The governed, reviewable codelist is
+    /// `spec/codelists/acmi-medications.codelist`.
+    pub fn snomed_ids(self) -> &'static [u64] {
+        match self {
+            Medication::Alverine => &[418483003],
+            Medication::Amantadine => &[372763006],
+            Medication::Amisulpride => &[391761004],
+            Medication::Amitriptyline => &[372726002],
+            Medication::Aripiprazole => &[406784005],
+            Medication::Atenolol => &[387506000],
+            Medication::Atropine => &[372832002],
+            Medication::Baclofen => &[387342009],
+            Medication::Bendroflumethiazide => &[387520007],
+            Medication::Betamethasone => &[116571008],
+            Medication::Bumetanide => &[387498005],
+            Medication::Buprenorphine => &[387173000],
+            Medication::Captopril => &[387160004],
+            Medication::Carbamazepine => &[387222003],
+            Medication::Cetirizine => &[372523007],
+            Medication::Chlorphenamine => &[372914003],
+            Medication::Chlorpromazine => &[387258005],
+            Medication::Cimetidine => &[373541007],
+            Medication::Cinnarizine => &[395955001],
+            Medication::Citalopram => &[372596005],
+            Medication::Clomipramine => &[372903001],
+            Medication::Clonazepam => &[387383007],
+            Medication::Clonidine => &[372805007],
+            Medication::Codeine => &[387494007],
+            Medication::Colchicine => &[387413002],
+            Medication::Cyclizine => &[387491004],
+            Medication::Darifenacin => &[416140008],
+            Medication::Desloratadine => &[396015008],
+            Medication::Dexamethasone => &[372584003],
+            Medication::Diazepam => &[387264003],
+            Medication::Digoxin => &[387461009],
+            Medication::Dihydrocodeine => &[387322000],
+            Medication::Dipyridamole => &[387371005],
+            Medication::Dosulepin => &[414047005],
+            Medication::Doxazosin => &[372508002],
+            Medication::Escitalopram => &[400447003],
+            Medication::Fentanyl => &[373492002],
+            Medication::Fesoterodine => &[432255001],
+            Medication::Fexofenadine => &[372522002],
+            Medication::Fluoxetine => &[372767007],
+            Medication::Flupentixol => &[387567006],
+            Medication::Furosemide => &[387475002],
+            Medication::GlycopyrroniumBromide => &[387122008],
+            Medication::Haloperidol => &[386837002],
+            Medication::Hydralazine => &[387125005],
+            Medication::Hydrochlorothiazide => &[387525002],
+            Medication::Hydrocortisone => &[396458002],
+            Medication::Hydroxyzine => &[372856003],
+            Medication::Hyoscine => &[387409009],
+            Medication::Imipramine => &[372718005],
+            Medication::Indapamide => &[387419003],
+            Medication::Indoramin => &[395748009],
+            Medication::Ipratropium => &[372518007],
+            Medication::Isosorbide => &[386854005, 387332007],
+            Medication::Loperamide => &[387040009],
+            Medication::Loratadine => &[386884002],
+            Medication::Lorazepam => &[387106007],
+            Medication::Mebeverine => &[419830007],
+            Medication::Metoprolol => &[372826007],
+            Medication::Midazolam => &[373476007],
+            Medication::Mirtazapine => &[386847004],
+            Medication::Morphine => &[373529000],
+            Medication::Nefopam => &[419768004],
+            Medication::Nifedipine => &[387490003],
+            Medication::Nortriptyline => &[372652004],
+            Medication::Olanzapine => &[386849001],
+            Medication::Oxybutynin => &[372717000],
+            Medication::Oxycodone => &[55452001],
+            Medication::Paroxetine => &[372595009],
+            Medication::Prednisolone => &[116601002],
+            Medication::Prochlorperazine => &[372853006],
+            Medication::Procyclidine => &[387247001],
+            Medication::Promethazine => &[372871004],
+            Medication::Quetiapine => &[386850001],
+            Medication::Ranitidine => &[372755005],
+            Medication::Risperidone => &[386840002],
+            Medication::Solifenacin => &[407030007],
+            Medication::Temazepam => &[387300007],
+            Medication::Theophylline => &[372810006],
+            Medication::TiotropiumBromide => &[425812008],
+            Medication::Tolterodine => &[372570008],
+            Medication::Tramadol => &[386858008],
+            Medication::Trazodone => &[372829000],
+            Medication::Trihexyphenidyl => &[387120000],
+            Medication::TrospiumChloride => &[326557004],
+            Medication::Umeclidinium => &[706898002],
+            Medication::Venlafaxine => &[372490001],
+            Medication::Warfarin => &[372756006],
+        }
+    }
+
     /// The published ACMI score (Table 3), already shifted to a positive
     /// scale and normalised so summing every medication's score totals
     /// approximately 100.
@@ -610,7 +711,16 @@ const MEDICATION_SLUGS: &[&str] = &[
     "warfarin",
 ];
 
+/// Compact ECL expression covering every medication's SNOMED concept(s)
+/// (`sct codelist export --format ecl spec/codelists/acmi-medications.codelist`),
+/// generated from, and kept in sync with, [`Medication::snomed_ids`].
+const MEDICATIONS_SNOMED_ECL: &str = "(<<55452001 OR <<116571008 OR <<116601002 OR <<326557004 OR <<372490001 OR <<372508002 OR <<372518007 OR <<372522002 OR <<372523007 OR <<372570008 OR <<372584003 OR <<372595009 OR <<372596005 OR <<372652004 OR <<372717000 OR <<372718005 OR <<372726002 OR <<372755005 OR <<372756006 OR <<372763006 OR <<372767007 OR <<372805007 OR <<372810006 OR <<372826007 OR <<372829000 OR <<372832002 OR <<372853006 OR <<372856003 OR <<372871004 OR <<372903001 OR <<372914003 OR <<373476007 OR <<373492002 OR <<373529000 OR <<373541007 OR <<386837002 OR <<386840002 OR <<386847004 OR <<386849001 OR <<386850001 OR <<386854005 OR <<386858008 OR <<386884002 OR <<387040009 OR <<387106007 OR <<387120000 OR <<387122008 OR <<387125005 OR <<387160004 OR <<387173000 OR <<387222003 OR <<387247001 OR <<387258005 OR <<387264003 OR <<387300007 OR <<387322000 OR <<387332007 OR <<387342009 OR <<387371005 OR <<387383007 OR <<387409009 OR <<387413002 OR <<387419003 OR <<387461009 OR <<387475002 OR <<387490003 OR <<387491004 OR <<387494007 OR <<387498005 OR <<387506000 OR <<387520007 OR <<387525002 OR <<387567006 OR <<391761004 OR <<395748009 OR <<395955001 OR <<396015008 OR <<396458002 OR <<400447003 OR <<406784005 OR <<407030007 OR <<414047005 OR <<416140008 OR <<418483003 OR <<419768004 OR <<419830007 OR <<425812008 OR <<432255001 OR <<706898002)";
+
 fn input_schema() -> Value {
+    let source = json!({
+        "citation": REFERENCE,
+        "url": "https://doi.org/10.1136/bmjmed-2026-002835"
+    });
     json!({
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "AcmiInput",
@@ -626,7 +736,20 @@ fn input_schema() -> Value {
                     "enum": MEDICATION_SLUGS
                 },
                 "uniqueItems": true,
-                "description": "Currently prescribed anticholinergic medications (international non-proprietary names), one entry per distinct drug. A medication not in this list of 88 is not scored by the ACMI, not an error."
+                "description": "Currently prescribed anticholinergic medications (international non-proprietary names), one entry per distinct drug. A medication not in this list of 88 is not scored by the ACMI, not an error.",
+                "definition": {
+                    "concept": "Current anticholinergic prescription (ACMI medication list)",
+                    "statement": "The patient currently holds a prescription for one or more of the 88 ingredient-level substances scored by the ACMI. Each enum value maps to a specific SNOMED CT substance concept, verified against the NHS dm+d ingredient simple reference set (999000791000001109) with the `sct` toolchain.",
+                    "excludes": [
+                        "Any substance not among these 88, even if it has anticholinergic properties on another scale - for example, most of the anticholinergic cognitive burden scale's medications that do not overlap with ACMI's list do NOT count here",
+                        "Historical or discontinued prescriptions - this reflects current medication use"
+                    ],
+                    "source": source,
+                    "snomedEcl": MEDICATIONS_SNOMED_ECL,
+                    "refset": "999000791000001109 |NHS dm+d (dictionary of medicines and devices) ingredient simple reference set|",
+                    "caveats": "The governed, per-medication mapping (including provenance) is spec/codelists/acmi-medications.codelist. Isosorbide is listed in the primary source without specifying an ester, so both the mononitrate and dinitrate concepts are included pending disambiguation - this is a primary-source ambiguity, not a terminology-binding error. Verified against SNOMED CT UK edition 2026-09-23; revalidate periodically as the edition advances.",
+                    "status": "draft"
+                }
             }
         }
     })
@@ -764,6 +887,67 @@ mod tests {
     fn rejects_unknown_fields() {
         let value = json!({ "medications": [], "dose": "high" });
         assert!(Acmi.calculate(&value).is_err());
+    }
+
+    /// The governed codelist (`spec/codelists/acmi-medications.codelist`,
+    /// validated separately with `sct codelist validate`) and the Rust
+    /// `snomed_ids()` match must never drift apart silently.
+    const ACMI_CODELIST: &str = include_str!("../../spec/codelists/acmi-medications.codelist");
+
+    fn codelist_sctids() -> HashSet<u64> {
+        ACMI_CODELIST
+            .lines()
+            .filter_map(|line| line.split_whitespace().next())
+            .filter(|token| token.chars().all(|c| c.is_ascii_digit()))
+            .map(|token| token.parse().unwrap())
+            .collect()
+    }
+
+    #[test]
+    fn every_snomed_id_is_in_the_governed_codelist() {
+        let codelist_ids = codelist_sctids();
+        assert_eq!(
+            codelist_ids.len(),
+            89,
+            "expected 89 concepts (88 medications, Isosorbide covering two esters)"
+        );
+        for medication in ALL_MEDICATIONS {
+            for id in medication.snomed_ids() {
+                assert!(
+                    codelist_ids.contains(id),
+                    "{}: SNOMED id {id} is not in spec/codelists/acmi-medications.codelist",
+                    medication.display_name()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn codelist_has_no_ids_unused_by_any_medication() {
+        let used: HashSet<u64> = ALL_MEDICATIONS
+            .iter()
+            .flat_map(|m| m.snomed_ids().iter().copied())
+            .collect();
+        let codelist_ids = codelist_sctids();
+        let unused: Vec<_> = codelist_ids.difference(&used).collect();
+        assert!(
+            unused.is_empty(),
+            "codelist has SNOMED ids not referenced by any Medication: {unused:?}"
+        );
+    }
+
+    #[test]
+    fn every_snomed_id_appears_in_the_ecl_expression() {
+        for medication in ALL_MEDICATIONS {
+            for id in medication.snomed_ids() {
+                let needle = format!("<<{id}");
+                assert!(
+                    MEDICATIONS_SNOMED_ECL.contains(&needle),
+                    "{}: SNOMED id {id} missing from MEDICATIONS_SNOMED_ECL",
+                    medication.display_name()
+                );
+            }
+        }
     }
 
     #[test]
