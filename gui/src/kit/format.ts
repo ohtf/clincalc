@@ -6,6 +6,7 @@ export function asText(v: unknown): string {
   if (v === null || v === undefined) return "";
   if (typeof v === "string") return v;
   if (typeof v === "boolean") return v ? "yes" : "no";
+  if (typeof v === "object") return JSON.stringify(v);
   return String(v);
 }
 

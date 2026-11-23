@@ -45,7 +45,7 @@ import {
   type CalcSummary,
 } from "./api/calc";
 import { EnginePanel } from "./EnginePanel";
-import type { CalculatorModule } from "./kit";
+import { asText, type CalculatorModule } from "./kit";
 import { localeLabel, setLocale, textDirectionFor, useLocale } from "./locale";
 
 /**
@@ -271,7 +271,7 @@ function Unavailable({ calc }: { calc: CalcSummary }) {
         )}
         {response && (
           <Stack gap="sm">
-            <Text fw={600}>{response.result}</Text>
+            <Text fw={600}>{asText(response.result)}</Text>
             <Text size="sm">{response.interpretation}</Text>
             <Text
               component="a"
@@ -621,9 +621,9 @@ function CalcLink({
               unavailable
             </Badge>
           )}
-          {!calc.unavailable && implemented && (
-            <Badge size="xs" color="teal" variant="light" style={{ flexShrink: 0 }}>
-              ready
+          {!calc.unavailable && !implemented && (
+            <Badge size="xs" color="gray" variant="light" style={{ flexShrink: 0 }}>
+              JSON only
             </Badge>
           )}
         </Group>

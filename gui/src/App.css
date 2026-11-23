@@ -25,6 +25,9 @@ body,
     /* Layout below responds to the main pane's own width, not the viewport's,
        because the sidebar is user-resizable. */
     container: main / inline-size;
+    /* Fields scrolled into view (keyboard focus, find-in-page) must land
+       below the fixed header, not under it. */
+    scroll-padding-top: calc(var(--app-shell-header-height, 0px) + var(--mantine-spacing-md));
 }
 
 /*
@@ -34,6 +37,18 @@ body,
 @container main (max-width: 720px) {
     .calc-columns {
         flex-direction: column;
+    }
+}
+
+/* Side by side, the result card follows the clinician down long forms
+   (NIHSS, Caprini, Duke-ISCVID) instead of stretching into an empty slab. */
+@container main (min-width: 721px) {
+    .calc-columns > :nth-child(2) {
+        position: sticky;
+        /* Sticky offsets resolve inside .app-main's padding, which already
+           clears the fixed header. */
+        top: 0;
+        align-self: flex-start;
     }
 }
 
@@ -68,7 +83,7 @@ body,
     .calc-layout-engine {
         max-width: none;
         position: sticky;
-        top: calc(var(--app-shell-header-height, 0px) + var(--mantine-spacing-lg));
+        top: 0;
         max-height: calc(
             100vh - var(--app-shell-header-height, 0px) - 2 * var(--mantine-spacing-lg)
         );

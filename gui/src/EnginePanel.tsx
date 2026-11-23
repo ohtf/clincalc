@@ -114,11 +114,13 @@ export function EnginePanel({ calc, crafted }: { calc: CalcSummary; crafted: boo
   }, []);
 
   useEffect(() => {
-    if (crafted) {
-      setRequestText(fromForm ? pretty(fromForm.input) : "");
-      setOutcome(fromForm && { response: fromForm.response, error: fromForm.error });
+    if (crafted && fromForm) {
+      setRequestText(pretty(fromForm.input));
+      setOutcome({ response: fromForm.response, error: fromForm.error });
       return;
     }
+    // No form, or a form not yet complete enough to call the engine: show the
+    // input template `clincalc calc <name>` prints.
     setOutcome(null);
     let active = true;
     inputTemplate(calc.name)

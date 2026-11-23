@@ -4,6 +4,7 @@
 import type { ReactNode } from "react";
 import {
   Checkbox,
+  Group,
   NumberInput,
   Radio,
   SegmentedControl,
@@ -44,8 +45,9 @@ export interface Choice<T extends string> {
 }
 
 /**
- * One of a fixed set of options. `radio` (default) suits options with long
- * labels or points annotations; `segmented` suits two to four short ones.
+ * One of a fixed set of options. `radio` (default) stacks options with long
+ * labels, points, or hints; `inline` lays two to four short options (units,
+ * Yes/No, Positive/Negative) in a row; `segmented` is a compact toggle.
  */
 export function ChoiceField<T extends string>({
   label,
@@ -60,8 +62,19 @@ export function ChoiceField<T extends string>({
   value: T | null;
   onChange: (value: T) => void;
   options: Choice<T>[];
-  layout?: "radio" | "segmented";
+  layout?: "radio" | "inline" | "segmented";
 }) {
+  if (layout === "inline") {
+    return (
+      <Radio.Group label={label} description={hint} value={value} onChange={(v) => onChange(v as T)}>
+        <Group gap="lg" mt={8}>
+          {options.map((o) => (
+            <Radio key={o.value} value={o.value} label={o.label} />
+          ))}
+        </Group>
+      </Radio.Group>
+    );
+  }
   if (layout === "segmented") {
     return (
       <Stack gap={4}>

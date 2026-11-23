@@ -40,8 +40,12 @@ export interface CalcSummary {
 /** A computed result (mirrors `clincalc::CalculationResponse`). */
 export interface CalculationResponse {
   calculator: string;
-  /** Number for most scores; a short string for categorical results. */
-  result: number | string;
+  /**
+   * Number for most scores; a short string for categorical results; a boolean
+   * for some decision rules (e.g. `lights_criteria`); an object where a
+   * calculator reports several primary values (e.g. `ldl_cholesterol`).
+   */
+  result: number | string | boolean | Record<string, unknown>;
   interpretation: string;
   /** Every intermediate value the score depended on, snake_case keys. */
   working: Record<string, unknown>;
