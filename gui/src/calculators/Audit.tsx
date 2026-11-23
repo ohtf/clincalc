@@ -44,12 +44,12 @@ const ITEMS: Array<{ text: string; options: Choice<string>[] }> = [
       "Monthly or less",
       "2-4 times a month",
       "2-3 times a week",
-      "4+ times a week",
+      "4 or more times a week",
     ]),
   },
   {
     text: "How many drinks containing alcohol do you have on a typical day when you are drinking?",
-    options: scale(["1-2", "3-4", "5-6", "7-9", "10+"]),
+    options: scale(["1 or 2", "3 or 4", "5 or 6", "7 to 9", "10 or more"]),
   },
   { text: "How often do you have six or more drinks on one occasion?", options: FREQUENCY },
   {
@@ -57,7 +57,7 @@ const ITEMS: Array<{ text: string; options: Choice<string>[] }> = [
     options: FREQUENCY,
   },
   {
-    text: "How often during the last year have you failed to do what was normally expected from you because of drinking?",
+    text: "How often during the last year have you failed to do what was normally expected of you because of drinking?",
     options: FREQUENCY,
   },
   {
@@ -69,12 +69,12 @@ const ITEMS: Array<{ text: string; options: Choice<string>[] }> = [
     options: FREQUENCY,
   },
   {
-    text: "How often during the last year have you been unable to remember what happened the night before because you had been drinking?",
+    text: "How often during the last year have you been unable to remember what happened the night before because of your drinking?",
     options: FREQUENCY,
   },
-  { text: "Have you or someone else been injured as a result of your drinking?", options: HARM },
+  { text: "Have you or someone else been injured because of your drinking?", options: HARM },
   {
-    text: "Has a relative or friend or a doctor or other health worker been concerned about your drinking or suggested you cut down?",
+    text: "Has a relative, friend, doctor, or other health care worker been concerned about your drinking or suggested you cut down?",
     options: HARM,
   },
 ];

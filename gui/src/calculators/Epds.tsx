@@ -19,18 +19,10 @@ import {
 
 /** Edinburgh Postnatal Depression Scale (Cox, Holden & Sagovsky 1987). */
 
-const ITEMS: Array<{ text: string; reverse: boolean }> = [
-  { text: "I have been able to laugh and see the funny side of things", reverse: false },
-  { text: "I have looked forward with enjoyment to things", reverse: false },
-  { text: "I have blamed myself unnecessarily when things went wrong", reverse: true },
-  { text: "I have been anxious or worried for no good reason", reverse: false },
-  { text: "I have felt scared or panicky for no very good reason", reverse: true },
-  { text: "Things have been getting on top of me", reverse: true },
-  { text: "I have been so unhappy that I have had difficulty sleeping", reverse: true },
-  { text: "I have felt sad or miserable", reverse: true },
-  { text: "I have been so unhappy that I have been crying", reverse: true },
-  { text: "The thought of harming myself has occurred to me", reverse: true },
-];
+const ITEMS = Array.from({ length: 10 }, (_, i) => ({
+  number: i + 1,
+  reverse: ![1, 2, 4].includes(i + 1),
+}));
 
 const SELF_HARM_ITEM = 9;
 const POSITIONS = ["1st", "2nd", "3rd", "4th"];
@@ -107,15 +99,16 @@ function EpdsCalculator() {
       form={
         <>
           <Text size="xs" c="dimmed">
-            For each item, pick the answer the respondent ticked on the printed EPDS, counting the
+            Use an authorised copy of the EPDS (© 1987 Royal College of Psychiatrists). For each
+            item, pick the answer the respondent ticked, counting the
             four answers from the top. The form applies the EPDS scoring key: items 1, 2 and 4 score
             0-1-2-3 down the page; items 3 and 5-10 are reverse scored 3-2-1-0.
           </Text>
           {ITEMS.map((item, i) => (
-            <div key={item.text}>
+            <div key={item.number}>
               {i === SELF_HARM_ITEM && <Divider mb="md" />}
               <ItemField
-                label={`${i + 1}. ${item.text}${item.reverse ? " (reverse scored)" : ""}`}
+                label={`Item ${item.number}${i === SELF_HARM_ITEM ? " (self-harm)" : ""}`}
                 value={answers[i]}
                 onChange={(v) => setAnswers((prev) => prev.map((a, j) => (j === i ? v : a)))}
                 options={optionsFor(item.reverse)}
@@ -161,7 +154,7 @@ function EpdsCalculator() {
           interpretation: r.interpretation,
           findingsTitle: "Item scores (past 7 days)",
           findings: ITEMS.map(
-            (item, i) => `Q${i + 1} ${item.text}: ${answers[i]} (${position(i)} answer)`,
+            (item, i) => `Q${item.number}: ${answers[i]} (${position(i)} answer)`,
           ),
           extra: [
             r.working.self_harm_item_flag === true

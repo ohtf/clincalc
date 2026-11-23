@@ -202,6 +202,8 @@ impl Calculator for Audit {
     }
 
     fn input_schema(&self) -> Value {
+        let frequency = json!({"type": "integer", "enum": [0, 1, 2, 3, 4], "description": "Never; less than monthly; monthly; weekly; daily or almost daily"});
+        let harm = json!({"type": "integer", "enum": [0, 2, 4], "description": "0 = No; 2 = Yes, but not in the last year; 4 = Yes, during the last year"});
         json!({
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "title": "AuditInput",
@@ -212,7 +214,13 @@ impl Calculator for Audit {
                 "responses": {
                     "type": "array",
                     "description": "Ten responses (Q1-Q10). Items 1-8 score 0-4; items 9 and 10 score only 0, 2, or 4.",
-                    "items": { "type": "integer", "minimum": 0, "maximum": 4 },
+                    "prefixItems": [
+                        {"type": "integer", "enum": [0, 1, 2, 3, 4], "description": "Never; monthly or less; 2–4 times a month; 2–3 times a week; 4 or more times a week"},
+                        {"type": "integer", "enum": [0, 1, 2, 3, 4], "description": "1 or 2; 3 or 4; 5 or 6; 7 to 9; 10 or more"},
+                        frequency, frequency, frequency, frequency, frequency, frequency,
+                        harm, harm
+                    ],
+                    "items": false,
                     "minItems": 10,
                     "maxItems": 10,
                     "definition": {
@@ -223,12 +231,12 @@ impl Calculator for Audit {
                             "Q2 How many drinks containing alcohol do you have on a typical day when you are drinking?",
                             "Q3 How often do you have six or more drinks on one occasion?",
                             "Q4 How often during the last year have you found that you were not able to stop drinking once you had started?",
-                            "Q5 How often during the last year have you failed to do what was normally expected from you because of drinking?",
+                            "Q5 How often during the last year have you failed to do what was normally expected of you because of drinking?",
                             "Q6 How often during the last year have you needed a first drink in the morning to get yourself going after a heavy drinking session?",
                             "Q7 How often during the last year have you had a feeling of guilt or remorse after drinking?",
-                            "Q8 How often during the last year have you been unable to remember what happened the night before because you had been drinking?",
-                            "Q9 Have you or someone else been injured as a result of your drinking? (0=No, 2=Yes but not in the last year, 4=Yes during the last year)",
-                            "Q10 Has a relative or friend or a doctor or other health worker been concerned about your drinking or suggested you cut down? (0=No, 2=Yes but not in the last year, 4=Yes during the last year)"
+                            "Q8 How often during the last year have you been unable to remember what happened the night before because of your drinking?",
+                            "Q9 Have you or someone else been injured because of your drinking?",
+                            "Q10 Has a relative, friend, doctor, or other health care worker been concerned about your drinking or suggested you cut down?"
                         ],
                         "caveats": "Risk thresholds may be lower for women and older people. The AUDIT screens; it does not diagnose an alcohol use disorder.",
                         "source": {

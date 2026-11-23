@@ -31,12 +31,11 @@ use crate::response::CalculationResponse;
 /// Machine name.
 pub const NAME: &str = "epds";
 
-/// Distribution licence: the EPDS may be reproduced free of charge for clinical
-/// or research use provided it is copied in full and the source is cited; no
-/// further permission is required (Cox, Holden & Sagovsky 1987).
+/// Scoring only. The EPDS questionnaire is not bundled: individual photocopying
+/// terms do not establish permission for software redistribution.
 pub const LICENSE: CalculatorLicense = CalculatorLicense::new(
-    "Free to reproduce in full for clinical or research use with the source citation; no further permission required (Cox, Holden & Sagovsky 1987)",
-    "https://doi.org/10.1192/bjp.150.6.782",
+    "Scoring only; EPDS questionnaire © 1987 Royal College of Psychiatrists, not redistributed. Use an authorised copy.",
+    "https://camcops.readthedocs.io/en/stable/tasks/epds.html#intellectual-property-rights",
 );
 
 /// Primary citation.
@@ -226,18 +225,7 @@ impl Calculator for Epds {
                     "definition": {
                         "concept": "EPDS item responses",
                         "statement": "Each item rates how the mother has felt over the LAST 7 DAYS, scored 0-3 per the EPDS key.",
-                        "includes": [
-                            "Q1 I have been able to laugh and see the funny side of things",
-                            "Q2 I have looked forward with enjoyment to things",
-                            "Q3 I have blamed myself unnecessarily when things went wrong (reverse scored)",
-                            "Q4 I have been anxious or worried for no good reason",
-                            "Q5 I have felt scared or panicky for no very good reason (reverse scored)",
-                            "Q6 Things have been getting on top of me (reverse scored)",
-                            "Q7 I have been so unhappy that I have had difficulty sleeping (reverse scored)",
-                            "Q8 I have felt sad or miserable (reverse scored)",
-                            "Q9 I have been so unhappy that I have been crying (reverse scored)",
-                            "Q10 The thought of harming myself has occurred to me (reverse scored)"
-                        ],
+                        "includes": ["Ten item scores, in questionnaire order, from an authorised copy of the EPDS"],
                         "excludes": [
                             "Responses must be the 0-3 scored value, NOT the literal answer position; reverse-scored items 3,5,6,7,8,9,10 must be oriented by the caller"
                         ],
