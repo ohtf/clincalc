@@ -64,19 +64,19 @@ fn population_and_threshold(age_years: f64) -> (&'static str, Option<f64>) {
 }
 
 pub fn compute(input: &ShockIndexInput) -> Result<ShockIndexOutcome, CalcError> {
-    if !input.age_years.is_finite() || input.age_years < 0.0 {
+    if !(0.0..=130.0).contains(&input.age_years) {
         return Err(CalcError::InvalidInput(
-            "age_years must be a non-negative finite number".into(),
+            "Age must be between 0 and 130 years".into(),
         ));
     }
-    if !input.heart_rate_bpm.is_finite() || input.heart_rate_bpm <= 0.0 {
+    if !(input.heart_rate_bpm > 0.0 && input.heart_rate_bpm <= 300.0) {
         return Err(CalcError::InvalidInput(
-            "heart_rate_bpm must be a positive finite number".into(),
+            "Heart rate must be above 0 and at most 300 bpm".into(),
         ));
     }
-    if !input.systolic_bp_mmhg.is_finite() || input.systolic_bp_mmhg <= 0.0 {
+    if !(input.systolic_bp_mmhg > 0.0 && input.systolic_bp_mmhg <= 300.0) {
         return Err(CalcError::InvalidInput(
-            "systolic_bp_mmhg must be a positive finite number".into(),
+            "Systolic pressure must be above 0 and at most 300 mmHg".into(),
         ));
     }
 
@@ -114,8 +114,8 @@ pub fn build_response(input: &ShockIndexInput) -> Result<CalculationResponse, Ca
             o.shock_index, o.population, threshold
         ),
         _ => format!(
-            "Shock index {:.2} (heart rate / systolic BP). No validated threshold is reported for this age ({} population); interpret in clinical context.",
-            o.shock_index, o.population
+            "Shock index {:.2} (heart rate / systolic BP). No validated threshold is reported for children under 4 years; interpret in clinical context.",
+            o.shock_index
         ),
     };
 

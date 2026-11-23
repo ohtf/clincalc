@@ -223,19 +223,19 @@ pub fn compute(input: &GraceInput) -> Result<GraceOutcome, CalcError> {
         ));
     }
     // Guard against transcription errors rather than scoring implausible values.
-    if input.age > 130 {
+    if !(18..=130).contains(&input.age) {
         return Err(CalcError::InvalidInput(
-            "age must be within a plausible range (0-130 years)".into(),
+            "GRACE 1.0 is an adult ACS score; age must be 18–130 years".into(),
         ));
     }
-    if input.heart_rate > 350 {
+    if !(1..=350).contains(&input.heart_rate) {
         return Err(CalcError::InvalidInput(
-            "heart_rate must be within a plausible range (0-350 bpm)".into(),
+            "Enter a measured heart rate between 1 and 350 bpm".into(),
         ));
     }
-    if input.systolic_bp > 320 {
+    if !(1..=320).contains(&input.systolic_bp) {
         return Err(CalcError::InvalidInput(
-            "systolic_bp must be within a plausible range (0-320 mmHg)".into(),
+            "Enter a measured systolic pressure between 1 and 320 mmHg".into(),
         ));
     }
 
@@ -370,19 +370,19 @@ impl Calculator for Grace {
             "properties": {
                 "age": {
                     "type": "integer",
-                    "minimum": 0,
+                    "minimum": 18,
                     "maximum": 130,
                     "description": "Age in years (banded every decade; <30 scores 0, >=90 scores 100)"
                 },
                 "heart_rate": {
                     "type": "integer",
-                    "minimum": 0,
+                    "minimum": 1,
                     "maximum": 350,
                     "description": "Heart rate, bpm (<50 scores 0, >=200 scores 46)"
                 },
                 "systolic_bp": {
                     "type": "integer",
-                    "minimum": 0,
+                    "minimum": 1,
                     "maximum": 320,
                     "description": "Systolic blood pressure, mmHg (scored inversely: <80 scores 58, >=200 scores 0)"
                 },

@@ -346,10 +346,10 @@ pub fn compute(input: &DukeIscvidInput) -> Result<DukeIscvidOutcome, CalcError> 
     }
     if input
         .maximum_documented_temperature_c
-        .is_some_and(|value| !value.is_finite())
+        .is_some_and(|value| !(10.0..=50.0).contains(&value))
     {
         return Err(CalcError::InvalidInput(
-            "maximum_documented_temperature_c must be finite when supplied".into(),
+            "Check the maximum documented temperature and units: expected 10–50 °C or no measurement".into(),
         ));
     }
     match (
@@ -862,7 +862,7 @@ fn input_schema() -> Value {
                 "Current prosthetic valve, valve-repair material, and endovascular CIED are entered only in intracardiac_prosthetic_material and derive this same single domain there. Use previous_valve_repair_without_current_material only when no current repair material remains. Congenital heart disease includes repaired or unrepaired congenital anomalies.", &source
             ),
             "maximum_documented_temperature_c": {
-                "type": ["number", "null"], "unit": "Cel",
+                "type": ["number", "null"], "unit": "Cel", "minimum": 10, "maximum": 50,
                 "description": "Maximum documented temperature in degrees Celsius, or null when no valid measurement is documented. Fever minor requires >38.0 C; exactly 38.0 C does not qualify.",
                 "definition": definition("Documented fever minor domain", "Enter the maximum documented temperature; the calculator derives fever only when it is strictly greater than 38.0 C.", "Do not infer fever from symptoms or round 38.0 C upward.", &source)
             },
@@ -1710,6 +1710,8 @@ mod tests {
         assert!(compute(&temperature).is_err());
         temperature.maximum_documented_temperature_c = Some(46.0);
         assert!(compute(&temperature).is_ok());
+        temperature.maximum_documented_temperature_c = Some(101.0);
+        assert!(compute(&temperature).is_err());
 
         let mut duplicate = empty();
         duplicate.intracardiac_prosthetic_material = vec![
@@ -1938,15 +1940,13 @@ mod tests {
             schema["allOf"][6]["then"]["properties"]["surgical_inspection_evidence"]["const"],
             json!("none_or_nonqualifying")
         );
-        assert!(
-            schema["properties"]["maximum_documented_temperature_c"]
-                .get("minimum")
-                .is_none()
+        assert_eq!(
+            schema["properties"]["maximum_documented_temperature_c"]["minimum"],
+            json!(10)
         );
-        assert!(
-            schema["properties"]["maximum_documented_temperature_c"]
-                .get("maximum")
-                .is_none()
+        assert_eq!(
+            schema["properties"]["maximum_documented_temperature_c"]["maximum"],
+            json!(50)
         );
         assert!(
             schema["properties"]["anatomic_imaging_evidence"]["enum"]

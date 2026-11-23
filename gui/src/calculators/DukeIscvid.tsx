@@ -507,7 +507,7 @@ function DukeIscvidCalculator() {
 
   const problems = conflicts(s);
   const setsOk = s.organism === "none" || (inRange(s.sets, 1, 255) && Number.isInteger(s.sets));
-  const temperatureOk = s.temperature === null || Number.isFinite(s.temperature);
+  const temperatureOk = s.temperature === null || (s.temperature >= 10 && s.temperature <= 50);
   const complete =
     s.pathologic !== null &&
     s.organism !== null &&
@@ -671,6 +671,8 @@ function DukeIscvidCalculator() {
             unit="°C"
             value={s.temperature}
             onChange={set("temperature")}
+            min={10}
+            max={50}
             decimals={1}
           />
 

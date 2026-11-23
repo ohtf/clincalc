@@ -70,6 +70,7 @@ pub struct Apache2Input {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Apache2Outcome {
+    pub physiology_points: [(&'static str, u8); 12],
     pub acute_physiology_score: u8,
     pub age_points: u8,
     pub chronic_health_points: u8,
@@ -95,18 +96,37 @@ pub fn compute(i: &Apache2Input) -> Result<Apache2Outcome, CalcError> {
         creatinine_base
     };
     let gcs_points = 15 - i.glasgow_coma_scale;
-    let acute_physiology_score = temp_points(i.temperature_c)
-        + map_points(i.mean_arterial_pressure_mm_hg)
-        + heart_rate_points(i.heart_rate)
-        + respiratory_rate_points(i.respiratory_rate)
-        + oxygenation
-        + ph_points(i.arterial_ph)
-        + sodium_points(i.sodium_mmol_l)
-        + potassium_points(i.potassium_mmol_l)
-        + creatinine
-        + hematocrit_points(i.hematocrit_percent)
-        + wbc_points(i.wbc_10_9_l)
-        + gcs_points;
+    let physiology_points = [
+        ("temperature_c", temp_points(i.temperature_c)),
+        (
+            "mean_arterial_pressure_mm_hg",
+            map_points(i.mean_arterial_pressure_mm_hg),
+        ),
+        ("heart_rate", heart_rate_points(i.heart_rate)),
+        (
+            "respiratory_rate",
+            respiratory_rate_points(i.respiratory_rate),
+        ),
+        (
+            if i.fio2 >= 0.5 {
+                "aa_gradient_mm_hg"
+            } else {
+                "pao2_mm_hg"
+            },
+            oxygenation,
+        ),
+        ("arterial_ph", ph_points(i.arterial_ph)),
+        ("sodium_mmol_l", sodium_points(i.sodium_mmol_l)),
+        ("potassium_mmol_l", potassium_points(i.potassium_mmol_l)),
+        ("creatinine_mg_dl", creatinine),
+        (
+            "hematocrit_percent",
+            hematocrit_points(i.hematocrit_percent),
+        ),
+        ("wbc_10_9_l", wbc_points(i.wbc_10_9_l)),
+        ("glasgow_coma_scale", gcs_points),
+    ];
+    let acute_physiology_score = physiology_points.iter().map(|(_, points)| points).sum();
     let age_points = age_points(i.age);
     let chronic_health_points = i.chronic_health_status.points();
     let total_score = acute_physiology_score + age_points + chronic_health_points;
@@ -114,6 +134,7 @@ pub fn compute(i: &Apache2Input) -> Result<Apache2Outcome, CalcError> {
         "APACHE II score {total_score}: acute physiology {acute_physiology_score}, age {age_points}, chronic health {chronic_health_points}. APACHE II is an ICU severity score derived from worst values in the first 24 hours; mortality prediction also depends on diagnostic category and should not be inferred from the score alone."
     );
     Ok(Apache2Outcome {
+        physiology_points,
         acute_physiology_score,
         age_points,
         chronic_health_points,
@@ -123,6 +144,11 @@ pub fn compute(i: &Apache2Input) -> Result<Apache2Outcome, CalcError> {
 }
 
 fn validate_ranges(i: &Apache2Input) -> Result<(), CalcError> {
+    if !(0.0..=14.0).contains(&i.arterial_ph) || !(0.0..=100.0).contains(&i.hematocrit_percent) {
+        return Err(CalcError::InvalidInput(
+            "Check the measured arterial pH (0–14) and haematocrit (0–100%)".into(),
+        ));
+    }
     for (name, value) in [
         ("temperature_c", i.temperature_c),
         (
@@ -139,8 +165,10 @@ fn validate_ranges(i: &Apache2Input) -> Result<(), CalcError> {
         ("hematocrit_percent", i.hematocrit_percent),
         ("wbc_10_9_l", i.wbc_10_9_l),
     ] {
-        if !value.is_finite() {
-            return Err(CalcError::InvalidInput(format!("{name} must be finite")));
+        if !value.is_finite() || value < 0.0 {
+            return Err(CalcError::InvalidInput(format!(
+                "{name} must be finite and non-negative"
+            )));
         }
     }
     if !(0.21..=1.0).contains(&i.fio2) {
@@ -377,6 +405,14 @@ pub fn build_response(input: &Apache2Input) -> Result<CalculationResponse, CalcE
     let o = compute(input)?;
     let mut working = Map::new();
     working.insert(
+        "physiology_points".into(),
+        json!(
+            o.physiology_points
+                .into_iter()
+                .collect::<std::collections::BTreeMap<_, _>>()
+        ),
+    );
+    working.insert(
         "acute_physiology_score".into(),
         json!(o.acute_physiology_score),
     );
@@ -416,7 +452,32 @@ impl Calculator for Apache2 {
         LICENSE
     }
     fn input_schema(&self) -> Value {
-        json!({ "$schema": "https://json-schema.org/draft/2020-12/schema", "title": "Apache2Input", "type": "object", "additionalProperties": false, "required": ["temperature_c", "mean_arterial_pressure_mm_hg", "heart_rate", "respiratory_rate", "fio2", "arterial_ph", "sodium_mmol_l", "potassium_mmol_l", "creatinine_mg_dl", "hematocrit_percent", "wbc_10_9_l", "glasgow_coma_scale", "age", "chronic_health_status"], "properties": { "temperature_c": { "type": "number" }, "mean_arterial_pressure_mm_hg": { "type": "number" }, "heart_rate": { "type": "number" }, "respiratory_rate": { "type": "number" }, "fio2": { "type": "number", "minimum": 0.21, "maximum": 1.0 }, "pao2_mm_hg": { "type": "number", "description": "Required when fio2 < 0.5" }, "aa_gradient_mm_hg": { "type": "number", "description": "Required when fio2 >= 0.5" }, "arterial_ph": { "type": "number" }, "sodium_mmol_l": { "type": "number" }, "potassium_mmol_l": { "type": "number" }, "creatinine_mg_dl": { "type": "number" }, "acute_renal_failure": { "type": "boolean", "description": "Double creatinine points when acute renal failure is present" }, "hematocrit_percent": { "type": "number" }, "wbc_10_9_l": { "type": "number" }, "glasgow_coma_scale": { "type": "integer", "minimum": 3, "maximum": 15 }, "age": { "type": "integer", "minimum": 0, "maximum": 120 }, "chronic_health_status": { "type": "string", "enum": ["none", "elective_postoperative", "nonoperative_or_emergency_postoperative"] } } })
+        json!({
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "Apache2Input", "type": "object", "additionalProperties": false,
+            "required": ["temperature_c", "mean_arterial_pressure_mm_hg", "heart_rate", "respiratory_rate", "fio2", "arterial_ph", "sodium_mmol_l", "potassium_mmol_l", "creatinine_mg_dl", "hematocrit_percent", "wbc_10_9_l", "glasgow_coma_scale", "age", "chronic_health_status"],
+            "properties": {
+                "temperature_c": { "type": "number", "minimum": 0, "description": "Core temperature in degrees Celsius" },
+                "mean_arterial_pressure_mm_hg": { "type": "number", "minimum": 0, "description": "Mean arterial pressure in mmHg" },
+                "heart_rate": { "type": "number", "minimum": 0, "description": "Heart rate in beats per minute" },
+                "respiratory_rate": { "type": "number", "minimum": 0, "description": "Respiratory rate in breaths per minute" },
+                "fio2": { "type": "number", "minimum": 0.21, "maximum": 1.0, "description": "Inspired oxygen fraction (not percent)" },
+                "pao2_mm_hg": { "type": "number", "exclusiveMinimum": 0, "description": "Arterial oxygen tension in mmHg; required when FiO2 < 0.5" },
+                "aa_gradient_mm_hg": { "type": "number", "minimum": 0, "description": "Alveolar–arterial oxygen gradient in mmHg; required when FiO2 >= 0.5" },
+                "arterial_ph": { "type": "number", "minimum": 0, "maximum": 14, "description": "Arterial pH" },
+                "sodium_mmol_l": { "type": "number", "minimum": 0, "description": "Serum sodium in mmol/L" },
+                "potassium_mmol_l": { "type": "number", "minimum": 0, "description": "Serum potassium in mmol/L" },
+                "creatinine_mg_dl": { "type": "number", "minimum": 0, "description": "Serum creatinine in mg/dL (not µmol/L)" },
+                "acute_renal_failure": { "type": "boolean", "description": "Double creatinine points when acute renal failure is present" },
+                "hematocrit_percent": { "type": "number", "minimum": 0, "maximum": 100, "description": "Haematocrit as a percentage (not a fraction)" },
+                "wbc_10_9_l": { "type": "number", "minimum": 0, "description": "White blood cell count in 10⁹/L" },
+                "glasgow_coma_scale": { "type": "integer", "minimum": 3, "maximum": 15, "description": "Total Glasgow Coma Scale; contributes 15 minus total" },
+                "age": { "type": "integer", "minimum": 0, "maximum": 120, "description": "Age in completed years" },
+                "chronic_health_status": { "type": "string", "enum": ["none", "elective_postoperative", "nonoperative_or_emergency_postoperative"], "description": "Select an operative category only if there was severe organ insufficiency or immunocompromise before admission. Otherwise use none." }
+            },
+            "allOf": [{ "if": { "properties": { "fio2": { "minimum": 0.5 } }, "required": ["fio2"] },
+                "then": { "required": ["aa_gradient_mm_hg"] }, "else": { "required": ["pao2_mm_hg"] } }]
+        })
     }
     fn calculate(&self, input: &Value) -> Result<CalculationResponse, CalcError> {
         let parsed: Apache2Input = serde_json::from_value(input.clone())

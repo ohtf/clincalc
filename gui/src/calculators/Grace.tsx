@@ -64,9 +64,9 @@ const CRITERIA = [
 type Key = (typeof CRITERIA)[number]["key"];
 type Criteria = Record<Key, boolean>;
 
-const AGE = { min: 0, max: 130 };
-const HR = { min: 0, max: 350 };
-const SBP = { min: 0, max: 320 };
+const AGE = { min: 18, max: 130 };
+const HR = { min: 1, max: 350 };
+const SBP = { min: 1, max: 320 };
 const CREATININE_MIN = 0;
 
 const noneTicked = (): Criteria =>

@@ -103,21 +103,29 @@ pub fn compute(input: &PesiInput) -> Result<PesiOutcome, CalcError> {
             "age_years must be between 0 and 130".into(),
         ));
     }
-    for (name, value) in [
-        ("pulse_bpm", input.pulse_bpm),
-        ("systolic_bp_mmhg", input.systolic_bp_mmhg),
-        ("respiratory_rate_per_min", input.respiratory_rate_per_min),
-        ("oxygen_saturation_percent", input.oxygen_saturation_percent),
+    for (name, value, max) in [
+        ("Pulse (bpm)", input.pulse_bpm, 300.0),
+        ("Systolic BP (mmHg)", input.systolic_bp_mmhg, 300.0),
+        (
+            "Respiratory rate (per minute)",
+            input.respiratory_rate_per_min,
+            80.0,
+        ),
+        (
+            "Oxygen saturation (%)",
+            input.oxygen_saturation_percent,
+            100.0,
+        ),
     ] {
-        if !value.is_finite() || value <= 0.0 {
+        if !(value > 0.0 && value <= max) {
             return Err(CalcError::InvalidInput(format!(
-                "{name} must be a positive finite number"
+                "{name} must be above 0 and at most {max}"
             )));
         }
     }
-    if !input.temperature_celsius.is_finite() {
+    if !(25.0..=45.0).contains(&input.temperature_celsius) {
         return Err(CalcError::InvalidInput(
-            "temperature_celsius must be a finite number".into(),
+            "Temperature must be between 25 and 45 °C".into(),
         ));
     }
 
