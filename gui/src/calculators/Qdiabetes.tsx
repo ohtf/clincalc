@@ -35,6 +35,7 @@ import {
 } from "@tabler/icons-react";
 
 import { calculate, type CalculationResponse } from "../api/calc";
+import type { CalculatorModule } from "../kit";
 
 /**
  * QDiabetes-2018: 10-year risk of developing type 2 diabetes. Three nested
@@ -582,3 +583,5 @@ export function QdiabetesCalculator() {
     </Stack>
   );
 }
+
+export const calculator: CalculatorModule = { name: "qdiabetes", Component: QdiabetesCalculator };

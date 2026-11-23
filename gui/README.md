@@ -51,12 +51,24 @@ No calculator has a non-English translation bundle yet (see `ENG-001.5`/`spec/mu
 
 ## Adding a calculator UI
 
-1. Implement the typed React component under `src/calculators/<Name>.tsx`. Use Mantine primitives and follow the FeverPAIN layout as a template:
-   - Form on the left, result on the right.
-   - Recompute on every change via `useEffect`, no Calculate button.
-   - Prominent **paste-ready summary** card (the "soft interoperability" headline) with an editable Textarea and Copy button.
-2. Register the component in `App.tsx`'s `IMPLEMENTED` map.
-3. (If it should appear in the "Featured" section at the top of the sidebar, add its name to the `FEATURED` array.)
+Create one file, `src/calculators/<Name>.tsx`, built on the kit in `src/kit/`, and export `calculator`:
+
+```tsx
+export const calculator: CalculatorModule = { name: "bmi", Component: BmiCalculator };
+```
+
+That is all the wiring: `App.tsx` collects every file's `calculator` export with `import.meta.glob`, so the form appears in the desktop app and the web playground at once. `Bmi.tsx` (numbers), `Centor.tsx` (criteria plus a number), and `Heart.tsx` (choices with points) are the reference shapes.
+
+- **`CalculatorPage`** is the whole page: header, form card, live result card, and the editable paste-ready summary. You supply the fields, the headline (`result`), optional `details`, and the `summary` text.
+- **`useCalculation(name, input)`** recomputes on every change. Pass `null` until the form is complete: the engine is never called with a partial or out-of-range input, and a result never outlives the input that produced it.
+- **Fields**: `YesNoField` (criteria whose absence is the default), `ChoiceField` (fixed options; show points in labels where the source defines them), `NumberField` (a unit, the schema's `minimum`/`maximum`, and `inRange` for completeness).
+- **Results**: `ScoreTile` and `Facts`; `summaryText`, `fmt`, `asText`, and `compact` for text and optional fields.
+
+Rules that keep the forms clinically safe:
+
+- Numbers start **empty**, never at a "typical" value, and an empty field is never sent as `0`. `NumberField` flags out-of-range values instead of clamping them.
+- Choices with no safe default start unselected; the form stays incomplete until the clinician answers.
+- Wording, hints, units, and ranges come from the calculator's schema and its Rust module (which cites the primary source), not from memory. Band names and colours come from the engine's own `working` values; where the source publishes no bands, leave the tile teal rather than inventing them.
 
 Do not try to auto-generate the form from `input_schema()`. The schema is sufficient for the CLI's generic template, but clinician-facing forms need hand-tuned hints, ordering, and units per calculator. Madness lies that way.
 

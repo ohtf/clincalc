@@ -30,6 +30,7 @@ import {
 } from "@tabler/icons-react";
 
 import { calculate, type CalculationResponse } from "../api/calc";
+import type { CalculatorModule } from "../kit";
 
 /**
  * Wells Score for Pulmonary Embolism: seven weighted clinical criteria,
@@ -334,3 +335,5 @@ export function WellsPeCalculator() {
     </Stack>
   );
 }
+
+export const calculator: CalculatorModule = { name: "wells_pe", Component: WellsPeCalculator };

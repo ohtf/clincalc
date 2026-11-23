@@ -32,6 +32,7 @@ import {
 } from "@tabler/icons-react";
 
 import { calculate, type CalculationResponse } from "../api/calc";
+import type { CalculatorModule } from "../kit";
 
 type Sex = "male" | "female";
 
@@ -385,3 +386,5 @@ export function Cha2ds2VascCalculator() {
     </Stack>
   );
 }
+
+export const calculator: CalculatorModule = { name: "cha2ds2vasc", Component: Cha2ds2VascCalculator };

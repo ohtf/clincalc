@@ -6,7 +6,7 @@ import {
   useState,
   type KeyboardEvent,
   type PointerEvent as ReactPointerEvent,
-  type ReactElement,
+  type ComponentType,
 } from "react";
 import {
   ActionIcon,
@@ -45,38 +45,19 @@ import {
   type CalcSummary,
 } from "./api/calc";
 import { EnginePanel } from "./EnginePanel";
+import type { CalculatorModule } from "./kit";
 import { localeLabel, setLocale, textDirectionFor, useLocale } from "./locale";
-import { AcmiCalculator } from "./calculators/Acmi";
-import { Cha2ds2VascCalculator } from "./calculators/Cha2ds2Vasc";
-import { Curb65Calculator } from "./calculators/Curb65";
-import { FeverPainCalculator } from "./calculators/FeverPain";
-import { GcsCalculator } from "./calculators/Gcs";
-import { News2Calculator } from "./calculators/News2";
-import { Phq9Calculator } from "./calculators/Phq9";
-import { QdiabetesCalculator } from "./calculators/Qdiabetes";
-import { Qrisk3Calculator } from "./calculators/Qrisk3";
-import { RockallCalculator } from "./calculators/Rockall";
-import { WellsPeCalculator } from "./calculators/WellsPe";
 
 /**
- * Which calculators have a hand-crafted UI today. As we build more, we add
- * an entry here mapping the machine name to its React component. Anything
- * not in this set shows the "coming soon" placeholder when selected,
- * rather than a broken page.
+ * Every hand-crafted form, collected from `src/calculators/*.tsx`: each file
+ * exports a `calculator` naming the engine calculator it renders. Anything
+ * not here shows the "Form coming soon" placeholder plus the JSON panel.
  */
-const IMPLEMENTED: Record<string, () => ReactElement> = {
-  feverpain: FeverPainCalculator,
-  cha2ds2vasc: Cha2ds2VascCalculator,
-  acmi: AcmiCalculator,
-  qrisk3: Qrisk3Calculator,
-  gcs: GcsCalculator,
-  curb65: Curb65Calculator,
-  news2: News2Calculator,
-  wells_pe: WellsPeCalculator,
-  qdiabetes: QdiabetesCalculator,
-  rockall: RockallCalculator,
-  phq9: Phq9Calculator,
-};
+const IMPLEMENTED: Record<string, ComponentType> = Object.fromEntries(
+  Object.values(
+    import.meta.glob<{ calculator?: CalculatorModule }>("./calculators/*.tsx", { eager: true }),
+  ).flatMap((module) => (module.calculator ? [[module.calculator.name, module.calculator.Component]] : [])),
+);
 
 /**
  * The shortlist that sits at the top of the sidebar. Ordering reflects

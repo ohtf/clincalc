@@ -32,6 +32,7 @@ import {
 } from "@tabler/icons-react";
 
 import { calculate, type CalculationResponse } from "../api/calc";
+import type { CalculatorModule } from "../kit";
 
 /**
  * CURB-65: five-item severity and 30-day mortality score for
@@ -353,3 +354,5 @@ export function Curb65Calculator() {
     </Stack>
   );
 }
+
+export const calculator: CalculatorModule = { name: "curb65", Component: Curb65Calculator };

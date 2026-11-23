@@ -34,6 +34,7 @@ import {
 } from "@tabler/icons-react";
 
 import { calculate, type CalculationResponse } from "../api/calc";
+import type { CalculatorModule } from "../kit";
 
 type Sex = "male" | "female";
 type Ethnicity =
@@ -586,3 +587,5 @@ export function Qrisk3Calculator() {
     </Stack>
   );
 }
+
+export const calculator: CalculatorModule = { name: "qrisk3", Component: Qrisk3Calculator };

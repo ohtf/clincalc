@@ -34,6 +34,7 @@ import {
 } from "@tabler/icons-react";
 
 import { calculate, type CalculationResponse } from "../api/calc";
+import type { CalculatorModule } from "../kit";
 
 /**
  * Rockall Score: pre-endoscopy (clinical) and full post-endoscopy risk of
@@ -426,3 +427,5 @@ export function RockallCalculator() {
     </Stack>
   );
 }
+
+export const calculator: CalculatorModule = { name: "rockall", Component: RockallCalculator };

@@ -31,6 +31,7 @@ import {
 } from "@tabler/icons-react";
 
 import { calculate, type CalculationResponse } from "../api/calc";
+import type { CalculatorModule } from "../kit";
 
 /**
  * PHQ-9: nine-item depression severity measure over the last two weeks
@@ -329,3 +330,5 @@ export function Phq9Calculator() {
     </Stack>
   );
 }
+
+export const calculator: CalculatorModule = { name: "phq9", Component: Phq9Calculator };

@@ -33,6 +33,7 @@ import {
 } from "@tabler/icons-react";
 
 import { calculate, type CalculationResponse } from "../api/calc";
+import type { CalculatorModule } from "../kit";
 
 /**
  * NEWS2: NHS-mandated aggregate physiology score (RCP 2017) driving the
@@ -421,3 +422,5 @@ export function News2Calculator() {
     </Stack>
   );
 }
+
+export const calculator: CalculatorModule = { name: "news2", Component: News2Calculator };

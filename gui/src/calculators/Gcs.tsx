@@ -31,6 +31,7 @@ import {
 } from "@tabler/icons-react";
 
 import { calculate, type CalculationResponse } from "../api/calc";
+import type { CalculatorModule } from "../kit";
 
 /**
  * GCS: three-component bedside conscious-level score (Teasdale & Jennett
@@ -368,3 +369,5 @@ export function GcsCalculator() {
     </Stack>
   );
 }
+
+export const calculator: CalculatorModule = { name: "gcs", Component: GcsCalculator };

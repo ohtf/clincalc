@@ -30,6 +30,7 @@ import {
 } from "@tabler/icons-react";
 
 import { calculate, type CalculationResponse } from "../api/calc";
+import type { CalculatorModule } from "../kit";
 
 /**
  * FeverPAIN: five-item validated score guiding antibiotic prescribing in
@@ -361,3 +362,5 @@ export function FeverPainCalculator() {
     </Stack>
   );
 }
+
+export const calculator: CalculatorModule = { name: "feverpain", Component: FeverPainCalculator };
