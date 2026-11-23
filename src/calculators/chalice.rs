@@ -145,6 +145,16 @@ pub struct ChaliceOutcome {
 
 /// Pure evaluation of the decision rule.
 pub fn compute(input: &ChaliceInput) -> Result<ChaliceOutcome, CalcError> {
+    if input.age_years >= 16 {
+        return Err(CalcError::InvalidInput(
+            "CHALICE applies to children under 16 years of age".into(),
+        ));
+    }
+    if input.gcs_below_14 && !input.gcs_below_15 {
+        return Err(CalcError::InvalidInput(
+            "Contradictory GCS observations: a score below 14 is also below 15".into(),
+        ));
+    }
     let mut positive: Vec<PositiveCriterion> = Vec::new();
 
     let mut add = |on: bool, group: &'static str, key: &'static str, label: &'static str| {
@@ -338,6 +348,10 @@ NICE NG232)."
             "title": "ChaliceInput",
             "type": "object",
             "additionalProperties": false,
+            "allOf": [{
+                "if": { "required": ["gcs_below_14"], "properties": { "gcs_below_14": { "const": true } } },
+                "then": { "required": ["gcs_below_15"], "properties": { "gcs_below_15": { "const": true } } }
+            }],
             "required": [
                 "age_years",
                 "loss_of_consciousness_over_5_min", "amnesia_over_5_min", "abnormal_drowsiness",
@@ -352,7 +366,7 @@ NICE NG232)."
                 "age_years": {
                     "type": "integer",
                     "minimum": 0,
-                    "maximum": 16,
+                    "maximum": 15,
                     "description": "Age in completed years (0 = under 1 year old). CHALICE applies to children under 16."
                 },
                 "loss_of_consciousness_over_5_min": {
@@ -474,6 +488,19 @@ mod tests {
             high_speed_rta: false,
             fall_over_3m: false,
             high_speed_projectile: false,
+        }
+    }
+
+    #[test]
+    fn rejects_out_of_scope_age_and_contradictory_gcs() {
+        assert!(compute(&base(15)).is_ok());
+        assert!(compute(&base(16)).is_err());
+        for age in [0, 5] {
+            let mut input = base(age);
+            input.gcs_below_14 = true;
+            assert!(compute(&input).is_err());
+            input.gcs_below_15 = true;
+            assert!(compute(&input).unwrap().ct_recommended);
         }
     }
 

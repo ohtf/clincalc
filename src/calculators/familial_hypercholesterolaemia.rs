@@ -6,7 +6,7 @@
 //! Implements two widely-used scoring systems:
 //!
 //! 1. Simon Broome criteria (UK Heart Foundation, 1991)
-//!    Definite FH: cholesterol criterion + tendon xanthomata or pathogenic mutation
+//!    Definite FH: qualifying DNA evidence, or cholesterol criterion + tendon xanthomata
 //!    Possible FH: cholesterol criterion + family history of premature CHD or raised cholesterol
 //!
 //! 2. Dutch Lipid Clinic Network (DLCN) criteria (Familial Hypercholesterolaemia Score)
@@ -30,7 +30,7 @@ pub const REFERENCE: &str = "Nordestgaard BG et al. Familial hypercholesterolaem
 undertreated in the general population: guidance for clinicians to prevent coronary heart disease. \
 Eur Heart J. 2013;34(45):3478-3490. doi:10.1093/eurheartj/eht273 | \
 Scientific Steering Committee on behalf of the Simon Broome Register Group. \
-Risk of fatal coronary heart disease in familial hypercholesterolaemia. BMJ. 1991;303:893-896.";
+Risk of fatal coronary heart disease in familial hypercholesterolaemia. BMJ. 1991;303:893-896. | NICE CG71 Appendix F (Simon Broome). | 2019 ESC/EAS dyslipidaemia guidelines, Table 12 (DLCN LDL-C boundaries). doi:10.1093/eurheartj/ehz455";
 
 // --- Simon Broome ---
 
@@ -80,7 +80,7 @@ pub enum DlcnFamilyHistory {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DlcnLdl {
-    /// LDL-C >= 8.5 mmol/L (8 pts)
+    /// LDL-C >= 8.5 mmol/L (8 pts), as in ESC/EAS Table 12; legacy wire slug above8_5.
     Above8_5,
     /// LDL-C 6.5-8.4 mmol/L (5 pts)
     From6_5To8_4,
@@ -97,8 +97,11 @@ pub enum DlcnLdl {
 pub struct FamilialHypercholesterolaemiaInput {
     // --- Simon Broome fields ---
     pub simon_broome_cholesterol: SimonBroomeCholesterol,
-    /// Tendon xanthomata in patient or first-degree relative (Definite FH criterion)
+    /// Tendon xanthomata in patient or first-/second-degree relative (Simon Broome).
+    /// When true, specify whether the patient is affected for DLCN scoring.
     pub tendon_xanthomata: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub patient_tendon_xanthomata: Option<bool>,
     /// Pathogenic DNA mutation (Definite FH criterion)
     pub pathogenic_mutation: bool,
     /// Family history of premature CHD in first-degree relative < 60 years, or elevated cholesterol
@@ -111,9 +114,7 @@ pub struct FamilialHypercholesterolaemiaInput {
     pub premature_coronary_disease: bool,
     /// Premature cerebral or peripheral vascular disease (men < 55, women < 60) (1 pt)
     pub premature_cerebrovascular_disease: bool,
-    /// Tendon xanthomata (6 pts) - shared with Simon Broome above
-    // Note: tendon_xanthomata field above is shared
-    /// Arcus cornealis before age 45 (4 pts)
+    /// Arcus cornealis in the patient before age 45 (4 pts)
     pub arcus_cornealis_under_45: bool,
     pub dlcn_ldl: DlcnLdl,
     /// Causative LDLR, APOB, or PCSK9 mutation confirmed (8 pts)
@@ -141,8 +142,19 @@ pub fn compute(
     input: &FamilialHypercholesterolaemiaInput,
 ) -> Result<FamilialHypercholesterolaemiaOutcome, CalcError> {
     // Simon Broome
-    let simon_broome = if input.simon_broome_cholesterol == SimonBroomeCholesterol::MeetsThreshold
-        && (input.tendon_xanthomata || input.pathogenic_mutation)
+    let patient_xanthomata = match (input.tendon_xanthomata, input.patient_tendon_xanthomata) {
+        (true, None) => return Err(CalcError::InvalidInput(
+            "Specify whether tendon xanthomata are present in the patient (not just a relative) for DLCN scoring".into(),
+        )),
+        (false, Some(true)) => return Err(CalcError::InvalidInput(
+            "Patient tendon xanthomata also satisfy the Simon Broome tendon xanthomata criterion".into(),
+        )),
+        (_, present) => present.unwrap_or(false),
+    };
+    let simon_broome = if input.pathogenic_mutation
+        || input.causative_mutation_confirmed
+        || (input.simon_broome_cholesterol == SimonBroomeCholesterol::MeetsThreshold
+            && input.tendon_xanthomata)
     {
         SimonBroomeResult::DefiniteFh
     } else if input.simon_broome_cholesterol == SimonBroomeCholesterol::MeetsThreshold
@@ -159,17 +171,21 @@ pub fn compute(
         DlcnFamilyHistory::RelativeWithPrematureCvdOrHighLdl => 1,
         DlcnFamilyHistory::RelativeWithXanthomasOrArcus => 2,
     };
-    let clinical_pts: u8 = (if input.premature_coronary_disease {
+    // Only the highest-scoring finding contributes within each DLCN group.
+    let clinical_pts: u8 = if input.premature_coronary_disease {
         2
-    } else {
-        0
-    }) + (if input.premature_cerebrovascular_disease {
+    } else if input.premature_cerebrovascular_disease {
         1
     } else {
         0
-    });
-    let physical_pts: u8 = (if input.tendon_xanthomata { 6 } else { 0 })
-        + (if input.arcus_cornealis_under_45 { 4 } else { 0 });
+    };
+    let physical_pts: u8 = if patient_xanthomata {
+        6
+    } else if input.arcus_cornealis_under_45 {
+        4
+    } else {
+        0
+    };
     let ldl_pts: u8 = match input.dlcn_ldl {
         DlcnLdl::Above8_5 => 8,
         DlcnLdl::From6_5To8_4 => 5,
@@ -256,6 +272,13 @@ impl Calculator for FamilialHypercholesterolaemia {
                 "premature_cerebrovascular_disease", "arcus_cornealis_under_45",
                 "dlcn_ldl", "causative_mutation_confirmed"
             ],
+            "allOf": [
+                {
+                    "if": { "required": ["tendon_xanthomata"], "properties": { "tendon_xanthomata": { "const": true } } },
+                    "then": { "required": ["patient_tendon_xanthomata"] },
+                    "else": { "properties": { "patient_tendon_xanthomata": { "const": false } } }
+                }
+            ],
             "properties": {
                 "simon_broome_cholesterol": {
                     "type": "string",
@@ -264,7 +287,11 @@ impl Calculator for FamilialHypercholesterolaemia {
                 },
                 "tendon_xanthomata": {
                     "type": "boolean",
-                    "description": "Tendon xanthomata in patient or first-degree relative (Simon Broome Definite; DLCN 6 pts)"
+                    "description": "Tendon xanthomata in patient or first- or second-degree relative (Simon Broome)"
+                },
+                "patient_tendon_xanthomata": {
+                    "type": "boolean",
+                    "description": "Tendon xanthomata in the patient (DLCN 6 pts); required if tendon_xanthomata is true. A relative's finding does not score in the physical examination group."
                 },
                 "pathogenic_mutation": {
                     "type": "boolean",
@@ -294,7 +321,7 @@ impl Calculator for FamilialHypercholesterolaemia {
                 "dlcn_ldl": {
                     "type": "string",
                     "enum": ["above8_5", "from6_5_to8_4", "from5_0_to6_4", "from4_0_to4_9", "below4_0"],
-                    "description": "LDL-C band for DLCN scoring (mmol/L): above8_5=8pts, from6_5_to8_4=5pts, from5_0_to6_4=3pts, from4_0_to4_9=1pt, below4_0=0pts"
+                    "description": "Untreated LDL-C (mmol/L), ESC/EAS Table 12: above8_5 means 8.5 or higher (8 pts); lower bands start at 6.5 (5 pts), 5.0 (3 pts), and 4.0 (1 pt). Below 4.0 scores 0."
                 },
                 "causative_mutation_confirmed": {
                     "type": "boolean",
@@ -319,6 +346,7 @@ mod tests {
         FamilialHypercholesterolaemiaInput {
             simon_broome_cholesterol: SimonBroomeCholesterol::BelowThreshold,
             tendon_xanthomata: false,
+            patient_tendon_xanthomata: None,
             pathogenic_mutation: false,
             family_history_premature_chd_or_raised_cholesterol: false,
             dlcn_family_history: DlcnFamilyHistory::None,
@@ -343,10 +371,12 @@ mod tests {
         let o = compute(&FamilialHypercholesterolaemiaInput {
             simon_broome_cholesterol: SimonBroomeCholesterol::MeetsThreshold,
             tendon_xanthomata: true,
+            patient_tendon_xanthomata: Some(false),
             ..base()
         })
         .unwrap();
         assert_eq!(o.simon_broome, SimonBroomeResult::DefiniteFh);
+        assert_eq!(o.dlcn_score, 0);
     }
 
     #[test]
@@ -387,15 +417,31 @@ mod tests {
     }
 
     #[test]
-    fn xanthomata_count_in_dlcn() {
-        // tendon xanthomata = 6 pts in DLCN
-        let o = compute(&FamilialHypercholesterolaemiaInput {
+    fn dlcn_counts_only_the_highest_finding_in_each_group() {
+        let mut i = FamilialHypercholesterolaemiaInput {
             tendon_xanthomata: true,
+            patient_tendon_xanthomata: Some(true),
+            arcus_cornealis_under_45: true,
+            premature_coronary_disease: true,
+            premature_cerebrovascular_disease: true,
+            ..base()
+        };
+        let o = compute(&i).unwrap();
+        assert_eq!(o.dlcn_score, 8);
+        assert_eq!(o.dlcn_category, "Probable FH");
+        i.patient_tendon_xanthomata = None;
+        assert!(compute(&i).is_err());
+    }
+
+    #[test]
+    fn confirmed_mutation_does_not_require_a_cholesterol_threshold() {
+        let o = compute(&FamilialHypercholesterolaemiaInput {
+            causative_mutation_confirmed: true,
             ..base()
         })
         .unwrap();
-        assert_eq!(o.dlcn_score, 6);
-        assert_eq!(o.dlcn_category, "Probable FH");
+        assert_eq!(o.simon_broome, SimonBroomeResult::DefiniteFh);
+        assert_eq!(o.dlcn_score, 8);
     }
 
     #[test]

@@ -5,7 +5,7 @@
 //!
 //! Nineteen weighted comorbidities predicting 10-year mortality.
 //! Charlson et al. (1987) original weights. Optional age adjustment
-//! adds 1 point per decade above 50 (Charlson 1994 update).
+//! adds 1 point at ages 50-59, 2 at 60-69, and so on (Charlson 1994).
 //!
 //! Weights:
 //!  1 point: MI, CHF, PVD, CVD/TIA, dementia, COPD, connective tissue disease,
@@ -14,7 +14,7 @@
 //!            CKD moderate-severe, solid tumour (non-metastatic),
 //!            leukaemia, lymphoma
 //!  3 points: moderate/severe liver disease
-//!  6 points: metastatic solid tumour, AIDS/HIV
+//!  6 points: metastatic solid tumour, AIDS
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
@@ -37,7 +37,7 @@ prognostic comorbidity in longitudinal studies: development and validation. J Ch
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CharlsonInput {
-    /// Age in years (used for optional age adjustment: +1 per decade over 50)
+    /// Age in years (optional age adjustment starts at age 50)
     pub age: u8,
     /// Include the age adjustment (+1 per decade over age 50)
     pub include_age_adjustment: bool,
@@ -64,7 +64,7 @@ pub struct CharlsonInput {
     pub diabetes_complicated: bool,
     /// Hemiplegia or paraplegia
     pub hemiplegia_paraplegia: bool,
-    /// Renal disease, moderate or severe (CKD stage 3+, dialysis, transplant)
+    /// Moderate or severe renal disease (e.g. dialysis or renal transplant)
     pub renal_disease_moderate_severe: bool,
     /// Solid tumour, non-metastatic (treated within 5 years counts)
     pub solid_tumour_non_metastatic: bool,
@@ -157,9 +157,9 @@ pub fn compute(input: &CharlsonInput) -> Result<CharlsonOutcome, CalcError> {
         score += 6;
     }
 
-    // Age adjustment: +1 per decade over 50
-    let age_adjustment = if input.include_age_adjustment && input.age > 50 {
-        (input.age - 51) / 10 + 1
+    // Charlson et al. (1994), p. 1246: 50-59 = 1, 60-69 = 2, 70-79 = 3.
+    let age_adjustment = if input.include_age_adjustment {
+        (input.age / 10).saturating_sub(4)
     } else {
         0
     };
@@ -200,6 +200,10 @@ pub fn build_response(input: &CharlsonInput) -> Result<CalculationResponse, Calc
     let mut working = Map::new();
     working.insert("comorbidity_score".into(), json!(o.score));
     working.insert("age_adjustment".into(), json!(o.age_adjustment));
+    working.insert(
+        "age_adjustment_included".into(),
+        json!(input.include_age_adjustment),
+    );
     working.insert("cci_total".into(), json!(o.total));
 
     Ok(CalculationResponse {
@@ -255,7 +259,7 @@ impl Calculator for Charlson {
                 "age": { "type": "integer", "minimum": 18, "maximum": 120 },
                 "include_age_adjustment": {
                     "type": "boolean",
-                    "description": "Add +1 per decade over age 50 (Charlson 1994 update)"
+                    "description": "Add 1 point for ages 50-59, 2 for 60-69, 3 for 70-79, and so on (Charlson 1994)"
                 },
                 "myocardial_infarction": { "type": "boolean", "description": "History of MI (1 pt)" },
                 "congestive_heart_failure": { "type": "boolean", "description": "CHF (1 pt)" },
@@ -326,22 +330,32 @@ mod tests {
 
     #[test]
     fn age_adjustment_adds_correctly() {
-        // Age 60 -> decade over 50 = 1 adjustment point
+        for (age, points) in [
+            (49, 0),
+            (50, 1),
+            (59, 1),
+            (60, 2),
+            (69, 2),
+            (70, 3),
+            (79, 3),
+            (80, 4),
+            (90, 5),
+        ] {
+            let o = compute(&CharlsonInput {
+                include_age_adjustment: true,
+                ..healthy(age)
+            })
+            .unwrap();
+            assert_eq!(o.age_adjustment, points, "age {age}");
+        }
+        // Published worked example: age 60 with a comorbidity score of 3 gives 5.
         let o = compute(&CharlsonInput {
             include_age_adjustment: true,
+            liver_disease_moderate_severe: true,
             ..healthy(60)
         })
         .unwrap();
-        assert_eq!(o.age_adjustment, 1);
-        assert_eq!(o.total, 1);
-
-        // Age 70 -> 2 adjustment points
-        let o2 = compute(&CharlsonInput {
-            include_age_adjustment: true,
-            ..healthy(70)
-        })
-        .unwrap();
-        assert_eq!(o2.age_adjustment, 2);
+        assert_eq!(o.total, 5);
     }
 
     #[test]

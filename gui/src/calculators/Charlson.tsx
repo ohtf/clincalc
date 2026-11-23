@@ -124,7 +124,7 @@ function CharlsonCalculator() {
       icon={IconClipboardList}
       title="Charlson Comorbidity Index"
       badge="Comorbidity burden"
-      description="Nineteen weighted comorbidities predicting 10-year mortality (Charlson 1987), with an optional age adjustment of +1 per decade over 50 (Charlson 1994 update). Survival estimates come from the original cohort."
+      description="Nineteen weighted comorbidities predicting 10-year mortality (Charlson 1987), with an optional age adjustment from age 50 (Charlson 1994). Survival estimates come from the original cohort."
       onReset={() => {
         setConditions(noneTicked());
         setAge(null);
@@ -145,7 +145,7 @@ function CharlsonCalculator() {
           />
           <ChoiceField layout="inline"
             label="Include the age adjustment"
-            hint="Adds 1 point per decade over age 50."
+            hint="Adds 1 point at ages 50–59, 2 at 60–69, and so on."
             value={adjust}
             onChange={setAdjust}
             options={YES_NO}
@@ -169,7 +169,7 @@ function CharlsonCalculator() {
           ))}
         </>
       }
-      result={(r) => <ScoreTile value={fmt(r.result)} badge={adjust === "yes" ? "age-adjusted" : "unadjusted"} />}
+      result={(r) => <ScoreTile value={fmt(r.result)} badge={r.working.age_adjustment_included === true ? "age-adjusted" : "unadjusted"} />}
       details={(r) => (
         <Facts
           items={[

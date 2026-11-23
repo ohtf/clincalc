@@ -162,8 +162,9 @@ const FLAGS = SECTIONS.flatMap((s) => s.flags);
 type Flags = Record<string, boolean>;
 
 const AGE = { min: 30, max: 100 };
+const HEIGHT = { min: 50, max: 250 };
+const WEIGHT = { min: 20, max: 500 };
 
-const positive = (v: number | null): v is number => inRange(v, 0) && v > 0;
 const noneTicked = (): Flags => Object.fromEntries(FLAGS.map((f) => [f.key, false]));
 const labelOf = <T extends string>(options: Choice<T>[], value: T | null) =>
   options.find((o) => o.value === value)?.label ?? "";
@@ -188,8 +189,8 @@ function QfractureCalculator() {
     ethnicity !== null &&
     smoking !== null &&
     alcohol !== null &&
-    positive(height) &&
-    positive(weight);
+    inRange(height, HEIGHT.min, HEIGHT.max) &&
+    inRange(weight, WEIGHT.min, WEIGHT.max);
   const calc = useCalculation(
     "qfracture",
     complete
@@ -261,7 +262,8 @@ function QfractureCalculator() {
               unit="cm"
               value={height}
               onChange={setHeight}
-              min={0}
+              min={HEIGHT.min}
+              max={HEIGHT.max}
               decimals={1}
             />
             <NumberField
@@ -270,7 +272,8 @@ function QfractureCalculator() {
               unit="kg"
               value={weight}
               onChange={setWeight}
-              min={0}
+              min={WEIGHT.min}
+              max={WEIGHT.max}
               decimals={1}
             />
           </SimpleGrid>

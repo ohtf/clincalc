@@ -71,21 +71,33 @@ pub fn build_response(input: &MapInput) -> Result<CalculationResponse, CalcError
     );
     working.insert("unit".into(), json!("mmHg"));
 
-    let interpretation = if o.map_mm_hg >= 65.0 {
+    // Keep the usual one decimal unless it obscures which side of 65 the
+    // value lies on. Never classify a value after display rounding.
+    let rounded = round1(o.map_mm_hg);
+    let result = if (rounded >= 65.0) == o.meets_sepsis_resuscitation_target {
+        rounded
+    } else {
+        o.map_mm_hg
+    };
+    let display = if result == rounded {
+        format!("{result:.1}")
+    } else {
+        result.to_string()
+    };
+    working.insert("map_display".into(), json!(display));
+    let interpretation = if o.meets_sepsis_resuscitation_target {
         format!(
-            "MAP {:.0} mmHg. Meets the commonly cited >=65 mmHg sepsis-resuscitation target (Surviving Sepsis Campaign 2021); this is a resuscitation threshold, not a universal definition of normal perfusion pressure for every patient.",
-            o.map_mm_hg
+            "MAP {display} mmHg. Meets the commonly cited >=65 mmHg sepsis-resuscitation target (Surviving Sepsis Campaign 2021); this is a resuscitation threshold, not a universal definition of normal perfusion pressure for every patient."
         )
     } else {
         format!(
-            "MAP {:.0} mmHg. Below the commonly cited >=65 mmHg sepsis-resuscitation target; correlate with the clinical context, as some patients (e.g. chronic hypertension) may need a higher individualised target.",
-            o.map_mm_hg
+            "MAP {display} mmHg. Below the commonly cited >=65 mmHg sepsis-resuscitation target; correlate with the clinical context, as some patients (e.g. chronic hypertension) may need a higher individualised target."
         )
     };
 
     Ok(CalculationResponse {
         calculator: NAME.to_string(),
-        result: json!(round1(o.map_mm_hg)),
+        result: json!(result),
         interpretation,
         working,
         reference: REFERENCE.to_string(),
@@ -155,6 +167,28 @@ mod tests {
         .unwrap();
         assert_eq!(out.map_mm_hg, 60.0);
         assert!(!out.meets_sepsis_resuscitation_target);
+    }
+
+    #[test]
+    fn display_does_not_round_up_across_target() {
+        for (systolic, diastolic, display, meets) in [
+            (90.0, 52.0, "64.7", false),
+            (90.0, 52.485, "64.99", false),
+            (90.0, 52.5, "65.0", true),
+        ] {
+            let r = build_response(&MapInput {
+                systolic_bp_mm_hg: systolic,
+                diastolic_bp_mm_hg: diastolic,
+            })
+            .unwrap();
+            assert_eq!(r.working["map_display"], json!(display));
+            assert!(
+                r.interpretation
+                    .starts_with(&format!("MAP {display} mmHg."))
+            );
+            assert_eq!(r.working["meets_sepsis_resuscitation_target"], json!(meets));
+            assert_eq!(r.result.as_f64().unwrap() >= 65.0, meets);
+        }
     }
 
     #[test]

@@ -66,7 +66,7 @@ const GCS: Choice<Gcs>[] = [
   { value: "13_or_lower", label: "13 or lower" },
 ];
 
-const AGE = { min: 0, max: 16 };
+const AGE = { min: 0, max: 15 };
 const noneTicked = (): Criteria => Object.fromEntries(ALL.map((c) => [c.key, false])) as Criteria;
 
 /** Two to five short options in one row; starts unselected like ChoiceField. */

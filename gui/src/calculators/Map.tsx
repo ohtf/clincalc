@@ -11,6 +11,7 @@ import {
   inRange,
   NumberField,
   ScoreTile,
+  asText,
   fmt,
   summaryText,
   useCalculation,
@@ -74,7 +75,7 @@ function MapCalculator() {
       }
       result={(r) => (
         <ScoreTile
-          value={fmt(r.result)}
+          value={asText(r.working.map_display ?? r.result)}
           unit="mmHg"
           badge={
             r.working.meets_sepsis_resuscitation_target ? "At or above 65 mmHg" : "Below 65 mmHg"
@@ -86,7 +87,7 @@ function MapCalculator() {
       )}
       summary={(r) =>
         summaryText({
-          heading: `MAP ${fmt(r.result)} mmHg (${r.working.meets_sepsis_resuscitation_target ? "meets" : "below"} the 65 mmHg sepsis-resuscitation target)`,
+          heading: `MAP ${asText(r.working.map_display ?? r.result)} mmHg (${r.working.meets_sepsis_resuscitation_target ? "meets" : "below"} the 65 mmHg sepsis-resuscitation target)`,
           interpretation: r.interpretation,
           findingsTitle: "Measurements",
           findings: [

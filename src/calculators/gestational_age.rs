@@ -20,7 +20,7 @@ use crate::license::CalculatorLicense;
 use crate::response::CalculationResponse;
 
 pub const NAME: &str = "gestational_age";
-pub const REFERENCE: &str = "Naegele's rule: Naegele FC. Lehrbuch der Geburtshilfe. 1812 (public domain). Current clinical confirmation and cycle-length adjustment per American College of Obstetricians and Gynecologists. Committee Opinion No. 700: Methods for Estimating the Due Date. Obstet Gynecol. 2017;129(5):e150-e154.";
+pub const REFERENCE: &str = "Naegele's rule: Naegele FC. Lehrbuch der Geburtshilfe. 1812. Cycle-length correction: Merck Manual Professional, Gestational Age. Clinical dating guidance: ACOG Committee Opinion No. 700, Obstet Gynecol. 2017;129(5):e150-e154.";
 pub const LICENSE: CalculatorLicense = CalculatorLicense::new(
     "Public-domain method - implemented from standard obstetric practice",
     "https://doi.org/10.1097/AOG.0000000000002046",
@@ -41,8 +41,8 @@ pub struct GestationalAgeInput {
     pub last_menstrual_period: CivilDate,
     /// The date gestational age is calculated at (the caller's "today").
     pub reference_date: CivilDate,
-    /// Optional usual menstrual cycle length in days, for the ACOG-endorsed
-    /// adjustment to Naegele's rule (which assumes a 28-day cycle). Omit if
+    /// Optional usual menstrual cycle length in days, to adjust the dating
+    /// estimate (Naegele's rule assumes a 28-day cycle). Omit if
     /// unknown.
     #[serde(default)]
     pub cycle_length_days: Option<u8>,
@@ -125,14 +125,20 @@ pub fn compute(input: &GestationalAgeInput) -> Result<GestationalAgeOutcome, Cal
         ));
     }
 
-    let gestation_days_at_reference = reference_days - lmp_days;
-    if !(0..=320).contains(&gestation_days_at_reference) {
+    let days_since_lmp = reference_days - lmp_days;
+    if !(0..=320).contains(&days_since_lmp) {
         return Err(CalcError::InvalidInput(
             "reference_date must be on or after last_menstrual_period, and no more than 320 days after it".to_string(),
         ));
     }
 
     let cycle_adjustment_days = input.cycle_length_days.map(|c| c as i64 - 28).unwrap_or(0);
+    let gestation_days_at_reference = days_since_lmp - cycle_adjustment_days;
+    if gestation_days_at_reference < 0 {
+        return Err(CalcError::InvalidInput(
+            "The reference date precedes the cycle-adjusted start of gestational dating".into(),
+        ));
+    }
     let edd_days = lmp_days + 280 + cycle_adjustment_days;
     let (edd_y, edd_m, edd_d) = civil_from_days(edd_days);
 
@@ -175,9 +181,19 @@ pub fn build_response(input: &GestationalAgeInput) -> Result<CalculationResponse
     );
 
     let interpretation = format!(
-        "Gestational age {} weeks {} days (trimester {}); estimated due date {:04}-{:02}-{:02}{}. Naegele's rule assumes a regular 28-day cycle with ovulation on day 14; it is a population estimate and is routinely superseded by first-trimester ultrasound dating when available.",
+        "Gestational age {} {} {} {} (trimester {}); estimated due date {:04}-{:02}-{:02}{}. Naegele's rule assumes a regular 28-day cycle with ovulation on day 14; it is a population estimate and is routinely superseded by first-trimester ultrasound dating when available.",
         o.gestational_age_weeks,
+        if o.gestational_age_weeks == 1 {
+            "week"
+        } else {
+            "weeks"
+        },
         o.gestational_age_days,
+        if o.gestational_age_days == 1 {
+            "day"
+        } else {
+            "days"
+        },
         o.trimester,
         o.estimated_due_date.year,
         o.estimated_due_date.month,
@@ -241,7 +257,7 @@ impl Calculator for GestationalAge {
                     },
                     "description": "The date to calculate gestational age at (the caller's \"today\"); this calculator does not read the system clock"
                 },
-                "cycle_length_days": { "type": "integer", "minimum": 21, "maximum": 45, "description": "Optional usual menstrual cycle length, for the ACOG-endorsed adjustment to Naegele's rule" }
+                "cycle_length_days": { "type": "integer", "minimum": 21, "maximum": 45, "description": "Optional usual length of a regular cycle. Shifts the due date and gestational dating together by the difference from 28 days." }
             }
         })
     }
@@ -303,22 +319,29 @@ mod tests {
     }
 
     #[test]
-    fn cycle_length_adjusts_edd() {
+    fn cycle_length_adjusts_edd_and_gestational_age() {
         // A 35-day cycle shifts EDD 7 days later than the default 28-day assumption.
         let default_edd = compute(&GestationalAgeInput {
             last_menstrual_period: date(2026, 1, 1),
-            reference_date: date(2026, 1, 1),
+            reference_date: date(2026, 10, 15),
             cycle_length_days: None,
         })
         .unwrap()
         .estimated_due_date;
-        let adjusted_edd = compute(&GestationalAgeInput {
+        let adjusted = compute(&GestationalAgeInput {
             last_menstrual_period: date(2026, 1, 1),
-            reference_date: date(2026, 1, 1),
+            reference_date: date(2026, 10, 15),
             cycle_length_days: Some(35),
         })
-        .unwrap()
-        .estimated_due_date;
+        .unwrap();
+        let adjusted_edd = adjusted.estimated_due_date;
+        assert_eq!(
+            (
+                adjusted.gestational_age_weeks,
+                adjusted.gestational_age_days
+            ),
+            (40, 0)
+        );
         let delta = days_from_civil(
             adjusted_edd.year as i64,
             adjusted_edd.month as i64,
@@ -329,6 +352,18 @@ mod tests {
             default_edd.day as i64,
         );
         assert_eq!(delta, 7);
+    }
+
+    #[test]
+    fn rejects_negative_cycle_adjusted_age() {
+        assert!(
+            compute(&GestationalAgeInput {
+                last_menstrual_period: date(2026, 1, 1),
+                reference_date: date(2026, 1, 5),
+                cycle_length_days: Some(35),
+            })
+            .is_err()
+        );
     }
 
     #[test]

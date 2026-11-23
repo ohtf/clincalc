@@ -41,7 +41,8 @@ const FAMILY_HISTORY: Choice<FamilyHistory>[] = [
   { value: "none", label: "None relevant (0)" },
   {
     value: "relative_with_premature_cvd_or_high_ldl",
-    label: "First-degree relative with premature CVD or LDL-C above the 95th percentile (1)",
+    label: "First-degree relative with premature coronary disease or LDL-C above the 95th percentile (1)",
+    hint: "Premature coronary disease: men under 55, women under 60.",
   },
   {
     value: "relative_with_xanthomas_or_arcus",
@@ -52,30 +53,36 @@ const FAMILY_HISTORY: Choice<FamilyHistory>[] = [
 
 const LDL: Choice<Ldl>[] = [
   { value: "above8_5", label: "8.5 mmol/L or above (8)" },
-  { value: "from6_5_to8_4", label: "6.5-8.4 mmol/L (5)" },
-  { value: "from5_0_to6_4", label: "5.0-6.4 mmol/L (3)" },
-  { value: "from4_0_to4_9", label: "4.0-4.9 mmol/L (1)" },
+  { value: "from6_5_to8_4", label: "6.5 to below 8.5 mmol/L (5)" },
+  { value: "from5_0_to6_4", label: "5.0 to below 6.5 mmol/L (3)" },
+  { value: "from4_0_to4_9", label: "4.0 to below 5.0 mmol/L (1)" },
   { value: "below4_0", label: "Below 4.0 mmol/L (0)" },
 ];
 
 const SIMON_BROOME = [
   {
-    key: "tendon_xanthomata",
-    label: "Tendon xanthomata",
-    summary: "Tendon xanthomata",
-    hint: "In the patient or a first-degree relative. Simon Broome definite criterion; also scores 6 DLCN points.",
+    key: "patient_tendon_xanthomata",
+    label: "Tendon xanthomata in the patient",
+    summary: "Tendon xanthomata in the patient",
+    hint: "Counts for Simon Broome and scores 6 points in the DLCN physical examination group.",
+  },
+  {
+    key: "relative_tendon_xanthomata",
+    label: "Tendon xanthomata in a first- or second-degree relative",
+    summary: "Tendon xanthomata in a first- or second-degree relative",
+    hint: "For DLCN, record a first-degree relative’s finding under family history, not physical examination.",
   },
   {
     key: "pathogenic_mutation",
     label: "Pathogenic mutation in LDLR, APOB, or PCSK9",
-    summary: "Pathogenic LDLR, APOB, or PCSK9 mutation (Simon Broome)",
-    hint: "Simon Broome definite criterion.",
+    summary: "Confirmed causative LDLR, APOB, or PCSK9 mutation",
+    hint: "Confirmed by DNA analysis in the patient. Meets the Simon Broome DNA criterion and scores 8 DLCN points.",
   },
   {
     key: "family_history_premature_chd_or_raised_cholesterol",
     label: "Family history of premature CHD or raised cholesterol",
     summary: "Family history of premature CHD or raised cholesterol",
-    hint: "Premature CHD in a first-degree relative under 60, or raised cholesterol in a first-degree relative. Simon Broome possible criterion.",
+    hint: "Myocardial infarction under 60 in a first-degree relative or under 50 in a second-degree relative; or qualifying raised cholesterol in a first- or second-degree relative (NICE CG71 Appendix F).",
   },
 ] as const;
 
@@ -97,12 +104,6 @@ const DLCN = [
     label: "Arcus cornealis before age 45 (4)",
     summary: "Arcus cornealis before age 45",
   },
-  {
-    key: "causative_mutation_confirmed",
-    label: "Causative mutation confirmed by DNA analysis (8)",
-    summary: "Causative LDLR, APOB, or PCSK9 mutation confirmed (DLCN)",
-    hint: "In LDLR, APOB, or PCSK9.",
-  },
 ] as const;
 
 const ALL = [...SIMON_BROOME, ...DLCN];
@@ -119,6 +120,7 @@ function FamilialHypercholesterolaemiaCalculator() {
   const [familyHistory, setFamilyHistory] = useState<FamilyHistory | null>(null);
   const [ldl, setLdl] = useState<Ldl | null>(null);
   const [criteria, setCriteria] = useState<Criteria>(noneTicked);
+  const { relative_tendon_xanthomata, ...engineCriteria } = criteria;
 
   const complete = sbCholesterol !== null && familyHistory !== null && ldl !== null;
   const calc = useCalculation(
@@ -128,7 +130,9 @@ function FamilialHypercholesterolaemiaCalculator() {
           simon_broome_cholesterol: sbCholesterol,
           dlcn_family_history: familyHistory,
           dlcn_ldl: ldl,
-          ...criteria,
+          ...engineCriteria,
+          tendon_xanthomata: criteria.patient_tendon_xanthomata || relative_tendon_xanthomata,
+          causative_mutation_confirmed: criteria.pathogenic_mutation,
         }
       : null,
   );
@@ -173,7 +177,7 @@ function FamilialHypercholesterolaemiaCalculator() {
             Dutch Lipid Clinic Network
           </Text>
           <Divider />
-          <ChoiceField label="LDL-C" value={ldl} onChange={setLdl} options={LDL} />
+          <ChoiceField label="Untreated LDL-C" value={ldl} onChange={setLdl} options={LDL} />
           <ChoiceField
             label="Family history"
             value={familyHistory}

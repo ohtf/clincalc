@@ -153,8 +153,9 @@ function GestationalAgeCalculator() {
   const gap = lmpDate && refDate ? dayNumber(refDate) - dayNumber(lmpDate) : null;
   const gapOk = gap !== null && gap >= 0 && gap <= MAX_GESTATION_DAYS;
   const cycleOk = cycle === null || isInt(cycle, CYCLE.min, CYCLE.max);
+  const beforeAdjustedStart = gapOk && cycleOk && cycle !== null && gap < cycle - 28;
 
-  const complete = lmpDate !== null && refDate !== null && gapOk && cycleOk;
+  const complete = lmpDate !== null && refDate !== null && gapOk && cycleOk && !beforeAdjustedStart;
   const calc = useCalculation(
     "gestational_age",
     complete
@@ -172,14 +173,16 @@ function GestationalAgeCalculator() {
       icon={IconCalendarHeart}
       title="Gestational age and due date"
       badge="Pregnancy dating"
-      description="Gestational age and estimated due date from the first day of the last menstrual period by Naegele's rule, with the ACOG cycle-length adjustment (ACOG Committee Opinion 700, 2017). First-trimester ultrasound dating supersedes this when available."
+      description="Gestational age and estimated due date from the last menstrual period, with an optional correction for regular cycles other than 28 days. First-trimester ultrasound is more accurate for dating."
       onReset={() => {
         setLmp(emptyDate());
         setReference(emptyDate());
         setCycle(null);
       }}
       calc={calc}
-      incomplete="Enter the LMP and the date to calculate at."
+      incomplete={beforeAdjustedStart
+        ? "The date to calculate at precedes the cycle-adjusted start of gestational dating."
+        : "Enter the LMP and the date to calculate at."}
       form={
         <>
           <DateFields
@@ -210,7 +213,7 @@ function GestationalAgeCalculator() {
           <Divider />
           <NumberField
             label="Usual cycle length"
-            hint="Optional. Naegele's rule assumes a 28-day cycle; a usual cycle length moves the due date by the difference."
+            hint="Optional, for regular cycles. The difference from 28 days shifts the due date and gestational dating together."
             unit="days"
             value={cycle}
             onChange={setCycle}

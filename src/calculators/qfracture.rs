@@ -593,6 +593,11 @@ fn r1(x: f64) -> f64 {
     (x * 10.0).round() / 10.0
 }
 
+// Broad software plausibility checks, consistent with our adult BMI calculator.
+// These are not QFracture derivation limits and do not clamp model inputs.
+const HEIGHT_CM: std::ops::RangeInclusive<f64> = 50.0..=250.0;
+const WEIGHT_KG: std::ops::RangeInclusive<f64> = 20.0..=500.0;
+
 /// Pure scoring: the QFracture-2012 model. BMI is derived from height and weight.
 pub fn compute(input: &QfractureInput) -> Result<QfractureOutcome, CalcError> {
     if input.age < 30 || input.age > 100 {
@@ -600,14 +605,14 @@ pub fn compute(input: &QfractureInput) -> Result<QfractureOutcome, CalcError> {
             "QFracture-2012 is validated for ages 30-100".into(),
         ));
     }
-    if !(input.height_cm.is_finite() && input.height_cm > 0.0) {
+    if !HEIGHT_CM.contains(&input.height_cm) {
         return Err(CalcError::InvalidInput(
-            "height_cm must be a positive number".into(),
+            "Check height and units: expected 50–250 cm".into(),
         ));
     }
-    if !(input.weight_kg.is_finite() && input.weight_kg > 0.0) {
+    if !WEIGHT_KG.contains(&input.weight_kg) {
         return Err(CalcError::InvalidInput(
-            "weight_kg must be a positive number".into(),
+            "Check weight and units: expected 20–500 kg".into(),
         ));
     }
 
@@ -775,11 +780,11 @@ impl Calculator for Qfracture {
         );
         props.insert(
             "height_cm".into(),
-            json!({ "type": "number", "exclusiveMinimum": 0, "description": "Height in centimetres (used to derive BMI)" }),
+            json!({ "type": "number", "minimum": HEIGHT_CM.start(), "maximum": HEIGHT_CM.end(), "description": "Height in centimetres (used to derive BMI). Bounds are entry safeguards, not published model limits." }),
         );
         props.insert(
             "weight_kg".into(),
-            json!({ "type": "number", "exclusiveMinimum": 0, "description": "Weight in kilograms (used to derive BMI)" }),
+            json!({ "type": "number", "minimum": WEIGHT_KG.start(), "maximum": WEIGHT_KG.end(), "description": "Weight in kilograms (used to derive BMI). Bounds are entry safeguards, not published model limits." }),
         );
         props.insert(
             "antidepressant".into(),
@@ -1197,11 +1202,15 @@ mod tests {
     #[test]
     fn rejects_bad_anthropometry() {
         let mut i = base(60, Sex::Male);
-        i.height_cm = 0.0;
-        assert!(compute(&i).is_err());
-        let mut j = base(60, Sex::Male);
-        j.weight_kg = -1.0;
-        assert!(compute(&j).is_err());
+        for height_cm in [0.0, 1.0, 49.9, 250.1, f64::NAN] {
+            i.height_cm = height_cm;
+            assert!(compute(&i).is_err());
+        }
+        i.height_cm = 170.0;
+        for weight_kg in [-1.0, 1.0, 19.9, 500.1, f64::INFINITY] {
+            i.weight_kg = weight_kg;
+            assert!(compute(&i).is_err());
+        }
     }
 
     #[test]

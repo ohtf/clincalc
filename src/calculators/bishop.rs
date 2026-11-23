@@ -12,8 +12,7 @@ use crate::license::CalculatorLicense;
 use crate::response::CalculationResponse;
 
 pub const NAME: &str = "bishop";
-pub const REFERENCE: &str =
-    "Bishop EH. Pelvic scoring for elective induction. Obstet Gynecol. 1964;24:266-268.";
+pub const REFERENCE: &str = "Bishop EH. Pelvic scoring for elective induction. Obstet Gynecol. 1964;24:266-268. | NICE NG207, Inducing labour (2021), recommendations 1.3.7-1.3.9 and terms used in this guideline.";
 pub const LICENSE: CalculatorLicense = CalculatorLicense::new(
     "Public-domain method - implemented from the primary literature",
     "https://pubmed.ncbi.nlm.nih.gov/14199536/",
@@ -149,6 +148,19 @@ pub fn build_response(input: &BishopInput) -> Result<CalculationResponse, CalcEr
     let o = compute(input);
     let mut working = Map::new();
     working.insert("favourable".into(), json!(o.favourable));
+    for (key, points) in [
+        ("dilation_points", input.dilation.points()),
+        ("effacement_points", input.effacement.points()),
+        ("station_points", input.station.points()),
+        ("consistency_points", input.consistency.points()),
+        ("position_points", input.position.points()),
+    ] {
+        working.insert(key.into(), json!(points));
+    }
+    working.insert(
+        "above_nice_induction_method_cutoff".into(),
+        json!(o.score > 6),
+    );
 
     let interpretation = if o.favourable {
         format!(
@@ -157,12 +169,12 @@ pub fn build_response(input: &BishopInput) -> Result<CalculationResponse, CalcEr
         )
     } else if o.score >= 7 {
         format!(
-            "Bishop score {}/13: intermediate. Scores of 6-7 sit between the favourable and unfavourable bands; local protocol and clinical context guide the induction method.",
+            "Bishop score {}/13: below the general favourable threshold of 8, but above the NICE NG207 induction-method cutoff of 6. These thresholds answer different questions; follow local protocol and clinical context.",
             o.score
         )
     } else {
         format!(
-            "Bishop score {}/13: unfavourable cervix. A low score is associated with a higher chance of failed induction and may prompt cervical ripening before oxytocin.",
+            "Bishop score {}/13: at or below the NICE NG207 induction-method cutoff of 6. Follow local protocol and clinical context when selecting an induction method.",
             o.score
         )
     };
@@ -254,6 +266,32 @@ mod tests {
         });
         assert_eq!(o.score, 2 + 2 + 2 + 2 + 2);
         assert!(o.favourable);
+    }
+
+    #[test]
+    fn distinguishes_score_six_seven_and_eight() {
+        let mut input = BishopInput {
+            dilation: Dilation::ThreeToFourCm,
+            effacement: Effacement::SixtyToSeventyPercent,
+            station: Station::MinusOneOrZero,
+            consistency: Consistency::Firm,
+            position: Position::Posterior,
+        };
+        let r = build_response(&input).unwrap();
+        assert_eq!(r.result, json!(6));
+        assert_eq!(
+            r.working["above_nice_induction_method_cutoff"],
+            json!(false)
+        );
+        input.position = Position::MidPosition;
+        let r = build_response(&input).unwrap();
+        assert_eq!(r.result, json!(7));
+        assert_eq!(r.working["above_nice_induction_method_cutoff"], json!(true));
+        assert_eq!(r.working["favourable"], json!(false));
+        input.position = Position::Anterior;
+        let r = build_response(&input).unwrap();
+        assert_eq!(r.result, json!(8));
+        assert_eq!(r.working["favourable"], json!(true));
     }
 
     #[test]
