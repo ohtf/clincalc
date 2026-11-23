@@ -21,6 +21,7 @@ updates:
   - package-ecosystem: "cargo"
     directories:
       - "/"
+      - "/clincalc-wasm"
       - "/gui/src-tauri"
       - "/python"
     schedule:
