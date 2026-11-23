@@ -251,6 +251,14 @@ Recorded 2026-11-14. Not a `clincalc` feature - a possible future *consumer* pro
 
 ---
 
+### ENG-015 Governed codelist authoring with `sct`
+
+- [ ] **ENG-015.1 Batch per-concept comments** - `sct codelist` can validate and export governed lists, but ACMI authoring needed a separate step to attach a different source medication label or provenance note to each concept. Tracked upstream in [pacharanero/sct#189](https://github.com/pacharanero/sct/issues/189). Do not change the verified ACMI concepts or weights as part of this tooling work.
+
+### ENG-016 Form number bounds
+
+- [ ] **ENG-016.1 Support exclusive numeric bounds in the shared `NumberField`** - Forms currently check these separately. Keep the incomplete state and inline validation consistent without representing an exclusive bound as an arbitrary inclusive approximation.
+
 ## Collaboration & sister projects
 
 ### COLL-001 Converge CHA₂DS₂-VASc with MedikQuantis
