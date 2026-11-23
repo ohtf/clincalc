@@ -296,7 +296,7 @@ The dependency arrows all point **into** the core, which never depends on anythi
 | **Human CLI** | Shipped | `clincalc calc`, `clincalc list`, readable output with copy-paste text summary. |
 | **Programmatic / stdio CLI** | Shipped | `--format json`, JSON stdin input - usable by any process that can exec a subprocess. |
 | **MCP server** | Shipped | `clincalc mcp` (optional `mcp` feature) - each calculator as a typed MCP tool for LLM hosts. |
-| **Desktop GUI** | MVP | Tauri desktop app with hand-crafted forms for 11 calculators; see `spec/gui.md`. Calls the Rust engine natively - no HTTP round-trip. |
+| **Desktop GUI** | MVP | Tauri desktop app with a hand-crafted form for every available calculator; see `spec/gui.md`. Calls the Rust engine natively - no HTTP round-trip. |
 | **REST API** | Shipped | Default-enabled `rest-api` feature - `clincalc api` starts an axum server with `GET /calculators`, per-calculator `POST`, and `GET /openapi.json`. |
 | **Web playground** | Evaluation | <https://ohtf.github.io/clincalc/try/> - the engine compiled to WebAssembly (`clincalc-wasm/`) behind the desktop GUI's frontend; runs entirely in the browser. Not for clinical decisions. |
 | **Python FFI** | Shipped | `pip install clincalc`; `clincalc.calculate("egfr", {...})` and `clincalc.batch("egfr", df)`. Implemented in `python/` as a separate `pyo3` crate so the core stays leaf-clean. |

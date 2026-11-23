@@ -2,7 +2,7 @@
 
 Tauri 2 + React 19 + Mantine 8 + Vite 7, matching the GitEHR house-style frontend stack while using a quieter Lato typeface and the same teal primary.
 
-Status: **MVP**. Eleven calculators (FeverPAIN, CHA2DS2-VASc, QRISK3, GCS, CURB-65, NEWS2, Wells Score for PE, QDiabetes-2018, Rockall, PHQ-9, and ACMI) are hand-crafted end-to-end. Other active calculators in the registry show a "GUI coming soon" placeholder when selected because their scoring already works via the CLI. Entries withheld for rights or clinical-safety reasons instead show the engine's exact unavailability explanation and never imply that scoring logic ships or is planned.
+Status: **MVP**. Every available calculator in the registry has a hand-crafted form, built on the shared kit in `src/kit/`. A calculator added to the engine without a form still runs here, through the JSON input panel and a "Form coming soon" placeholder. Entries withheld for rights or clinical-safety reasons instead show the engine's exact unavailability explanation and never imply that scoring logic ships or is planned.
 
 ## Architecture
 

@@ -61,7 +61,9 @@ With every available calculator, hand-crafted or not, sits the engine contract: 
 
 ## Implemented baseline
 
-Eleven calculators have hand-crafted forms: FeverPAIN, CHA2DS2-VASc, QRISK3, GCS, CURB-65, NEWS2, Wells PE, QDiabetes-2018, Rockall, PHQ-9, and ACMI. Every other available calculator shows "Form coming soon" plus the engine panel; entries withheld for rights or safety reasons show the engine's unavailability explanation and no panel.
+Every available calculator has a hand-crafted form, each one file in `gui/src/calculators/` built on the kit in `gui/src/kit/` (see `gui/README.md`, "Adding a calculator UI"). A calculator added to the engine without a form shows "Form coming soon" plus the engine panel; entries withheld for rights or safety reasons show the engine's unavailability explanation and no panel.
+
+The kit encodes the safety rules every form follows: numbers start empty and an empty or out-of-range value keeps the form incomplete (the engine is never called with partial input, and a result never outlives its input); choices with no safe default start unselected; and band names and colours come only from the engine's own `working` values, never from thresholds written into the form.
 
 Open GUI and distribution work is tracked by stable ID in [`spec/roadmap.md`](roadmap.md), especially `GUI-*` and `REL-*` items.
 
