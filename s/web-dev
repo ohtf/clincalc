@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Marcus Baw and Baw Medical Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Run the browser playground locally with hot reload on the React side
+# (http://127.0.0.1:5174). Engine changes need a re-run, which rebuilds the
+# WebAssembly module first. Prerequisites: see s/web-wasm, plus
+# `cd gui && npm install`.
+
+set -euo pipefail
+root="$(git rev-parse --show-toplevel)"
+
+"$root/s/web-wasm"
+
+cd "$root/gui"
+CLINCALC_TARGET=web exec npx vite "$@"

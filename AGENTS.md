@@ -44,7 +44,7 @@ The CLI surface (one shape for the whole registry) is documented in [`docs/cli-r
 
 ## GUI debugging
 
-For anything happening in a GUI - Tauri desktop, React frontend, `clincalc-web`, or docs UI - Playwright is essential. Reproduce with Playwright, inspect the DOM, console, and network requests, and only then patch the code. A typecheck or build alone is not enough evidence for GUI bugs.
+For anything happening in a GUI - Tauri desktop, React frontend, the web playground, or docs UI - Playwright is essential. Reproduce with Playwright, inspect the DOM, console, and network requests, and only then patch the code. A typecheck or build alone is not enough evidence for GUI bugs.
 
 ## SNOMED CT lookups
 
@@ -113,6 +113,6 @@ When research for this project finds something we can't use because no free, ope
 
 - `cargo-dist` release pipeline publishing `clincalc` to crates.io and the `ohtf/homebrew-tap`.
 - Tauri desktop GUI whose headline is prominent copy-paste ("soft interoperability").
-- `clincalc-web` (single-file HTML) is on the roadmap but deprioritised.
+- Web playground at `/clincalc/try/` (the engine compiled to WebAssembly in `clincalc-wasm/`, behind the GUI's frontend): shipped as an evaluation tool; follow-ups are `ENG-003.*`.
 
-Project lives at <https://github.com/ohtf/clincalc>. Docs are deployed to <https://ohtf.github.io/clincalc/> from `.github/workflows/deploy-docs-to-ghpages.yml`.
+Project lives at <https://github.com/ohtf/clincalc>. Docs are deployed to <https://ohtf.github.io/clincalc/>, with the web playground at <https://ohtf.github.io/clincalc/try/>, from `.github/workflows/docs.yml`.

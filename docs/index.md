@@ -7,6 +7,9 @@ A clinical calculation score is computed in the core Rust library, so the result
 !!! tip "New here? Start with the Walkthrough"
     The **[Walkthrough](walkthrough.md)** runs four real calculators end to end - with copy-paste commands and ready-made example files, so you never have to invent your own inputs.
 
+!!! example "Try it in your browser - nothing to install"
+    The **[web playground](https://ohtf.github.io/clincalc/try/)** runs the same engine, compiled to WebAssembly, entirely in your browser. Under every calculator you can see the exact JSON the engine received and returned, and the same call from the command line, REST API, and Python. It is an evaluation tool, not for clinical decisions about real patients.
+
 ## Install
 
 === "Linux / macOS"

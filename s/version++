@@ -119,10 +119,12 @@ if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
   exit 1
 fi
 
-# The Python bindings and Tauri GUI are excluded from the workspace (each has
-# its own Cargo.lock), so their version-bearing files are bumped explicitly and
-# kept in lockstep. pyproject.toml reads the Python crate version dynamically.
+# The Python bindings, WebAssembly bindings, and Tauri GUI are excluded from the
+# workspace (each has its own Cargo.lock), so their version-bearing files are
+# bumped explicitly and kept in lockstep. pyproject.toml reads the Python crate
+# version dynamically.
 cargo set-version --manifest-path python/Cargo.toml "$next"
+cargo set-version --manifest-path clincalc-wasm/Cargo.toml "$next"
 cargo set-version --manifest-path gui/src-tauri/Cargo.toml "$next"
 (
   cd gui
@@ -138,6 +140,7 @@ node -e '
 
 cargo generate-lockfile
 cargo generate-lockfile --manifest-path python/Cargo.toml
+cargo generate-lockfile --manifest-path clincalc-wasm/Cargo.toml
 cargo generate-lockfile --manifest-path gui/src-tauri/Cargo.toml
 s/check-release-version "$tag"
 
@@ -155,6 +158,7 @@ git-cliff --output CHANGELOG.md --tag "$tag"
 
 git add Cargo.toml Cargo.lock CHANGELOG.md \
   python/Cargo.toml python/Cargo.lock python/pyproject.toml \
+  clincalc-wasm/Cargo.toml clincalc-wasm/Cargo.lock \
   gui/package.json gui/package-lock.json \
   gui/src-tauri/Cargo.toml gui/src-tauri/Cargo.lock \
   gui/src-tauri/tauri.conf.json

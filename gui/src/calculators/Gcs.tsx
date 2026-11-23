@@ -215,7 +215,7 @@ export function GcsCalculator() {
         </Tooltip>
       </Group>
 
-      <Group align="stretch" gap="lg" wrap="nowrap">
+      <Group className="calc-columns" align="stretch" gap="lg" wrap="nowrap">
         <Card withBorder padding="lg" radius="lg" style={{ flex: 1 }}>
           <Stack gap="md">
             <Select

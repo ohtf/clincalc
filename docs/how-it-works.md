@@ -77,9 +77,11 @@ The optional `mcp` feature adds `clincalc mcp`, a local stdio MCP server for LLM
 
 MCP dependencies live behind the `mcp` feature. They do not affect the `default-features = false` leaf engine.
 
-### `clincalc-web` - single-file HTML tools (deprioritised)
+### The web playground - the engine in your browser
 
-Self-contained per-calculator HTML files with a shared context-detection bridge. Currently inline JS; the planned end-state is the same `clincalc` compiled to WebAssembly so the browser surface shares the engine. Not on the active work list.
+The [web playground](https://ohtf.github.io/clincalc/try/) is the same `clincalc` engine compiled to WebAssembly (the `clincalc-wasm` bindings crate, built with `default-features = false`), running inside the page behind the desktop GUI's own frontend. Nothing is sent to a server: the scoring happens in your browser, and a result there is byte-identical to the CLI's. Under every calculator, an "Under the hood" panel shows the exact JSON the engine received and returned, and the same call from the command line, REST API, and Python - the contract a host EPR uses to embed `clincalc`.
+
+It is an evaluation tool for exploring `clincalc`, not for clinical decisions about real patients, and says so on every page.
 
 ## The result shape
 

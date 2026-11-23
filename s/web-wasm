@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Marcus Baw and Baw Medical Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Compile the clincalc engine to WebAssembly and generate its JS bindings in
+# clincalc-wasm/pkg/, ready for s/web-build or s/web-dev.
+#
+# Prerequisites (once):
+#   rustup target add wasm32-unknown-unknown
+#   cargo install wasm-bindgen-cli --version <the exact wasm-bindgen pin in clincalc-wasm/Cargo.toml> --locked
+
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)/clincalc-wasm"
+
+pinned=$(sed -nE 's/^wasm-bindgen = "=([0-9.]+)"/\1/p' Cargo.toml)
+
+if ! command -v wasm-bindgen >/dev/null 2>&1; then
+  echo "wasm-bindgen is not installed. Install the pinned version:" >&2
+  echo "  cargo install wasm-bindgen-cli --version $pinned --locked" >&2
+  exit 1
+fi
+
+installed=$(wasm-bindgen --version | awk '{print $2}')
+if [[ "$installed" != "$pinned" ]]; then
+  echo "wasm-bindgen $installed is installed but clincalc-wasm pins $pinned. Install the pinned version:" >&2
+  echo "  cargo install wasm-bindgen-cli --version $pinned --locked --force" >&2
+  exit 1
+fi
+
+cargo build --release --locked --target wasm32-unknown-unknown
+exec wasm-bindgen --target web --no-typescript --out-dir pkg \
+  target/wasm32-unknown-unknown/release/clincalc_wasm.wasm

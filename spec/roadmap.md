@@ -99,20 +99,18 @@ Decisions:
 - A new calculator in the MedikQuantis parity section is planned as one `en`/`ca`/`es` workstream. Prefer one implementation pull request; an English-first merge is acceptable when review availability is the only blocker, but the calculator's parity item remains `[~]` and non-English locales remain unadvertised.
 - Translation reuse does not imply scoring reuse. clincalc continues to implement and test calculations from primary sources, then uses MedikQuantis for cross-project comparison and MIT-licensed prose adaptation with attribution.
 
-### ENG-003 `clincalc-web`
+### ENG-003 Web playground
 
-Status: Future
+Status: Planned follow-ups
 
-A single-file HTML/web UI for calculators. The headline is copy-paste interoperability, so the web surface should produce the same clean text summary as the CLI and let users copy results into an EHR.
+The playground shipped at <https://ohtf.github.io/clincalc/try/>: the engine compiled to WebAssembly (`clincalc-wasm/`) behind the desktop GUI's own frontend, deployed alongside the Zensical docs. The design and its decisions (WebAssembly over a TypeScript port, one shared frontend, evaluation-only framing, the engine panel) are recorded in [`calculators.md`](calculators.md#web-playground-clincalc-wasm--the-shared-gui-frontend) and [`gui.md`](gui.md#one-frontend-two-runtimes).
 
-- [ ] **ENG-003.1 Compile the `clincalc` engine to WebAssembly** (`wasm32-unknown-unknown`) with `default-features = false` so the browser surface shares the scoring logic.
-- [ ] **ENG-003.2 Build a minimal HTML/CSS/JS shell** that loads the WASM module, lists calculators from `clincalc::all()`, renders forms from `input_schema()`, and displays the JSON/text result.
-- [ ] **ENG-003.3 Keep it single-file or very few files** so it can be deployed to GitHub Pages or opened locally without a build step for end users.
-- [ ] **ENG-003.4 Add a `clincalc web` CLI subcommand** (behind a new `web` feature?) that serves the bundle locally, or ship it as a static asset on the docs site.
+- [ ] **ENG-003.5 Link the docs catalogue to the playground** - a "Try it" link per row of `docs/calculators.md` to `try/#<name>`, ideally generated from the registry so it cannot drift.
+- [ ] **ENG-003.6 Self-host the Lato font** - `gui/index.html` loads it from Google Fonts, so every playground visit makes a third-party request (no user input is sent, but the visitor's IP is). Bundle it instead, for the desktop app too.
+- [ ] **ENG-003.7 Shrink the WebAssembly download** - about 880 KB gzipped today, mostly clinical text. Measure `wasm-opt -Oz` and per-calculator lazy loading before choosing either.
 
 Open questions for comment:
-- Should the web UI be a separate repo (`clincalc-web`) or a sub-directory here that publishes to the existing Pages site?
-- Is a WASM build worth the toolchain complexity, or is duplicating logic in TypeScript acceptable for a read-only web demo?
+- Should the docs and the playground integrate more deeply (shared navigation and theme), at the cost of coupling two otherwise independent builds? Today they only link to each other, which keeps either replaceable.
 
 ### ENG-004 FHIR Observation export
 

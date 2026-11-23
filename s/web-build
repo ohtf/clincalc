@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Marcus Baw and Baw Medical Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Build the browser playground: the clincalc engine compiled to WebAssembly
+# behind the same React frontend as the desktop GUI. Output is a static site.
+#
+#   s/web-build              # writes gui/dist-web/
+#   s/web-build site/try     # writes into the docs site, as the Pages deploy does
+#
+# The output uses relative asset paths, so it can be served from any subpath.
+# Prerequisites: see s/web-wasm, plus `cd gui && npm install`.
+
+set -euo pipefail
+root="$(git rev-parse --show-toplevel)"
+out="$(realpath -m "${1:-$root/gui/dist-web}")"
+
+"$root/s/web-wasm"
+
+cd "$root/gui"
+npx tsc
+CLINCALC_TARGET=web exec npx vite build --outDir "$out" --emptyOutDir

@@ -57,6 +57,7 @@ extra_css:
 
 nav:
   - Home: index.md
+  - Try it in your browser: https://ohtf.github.io/clincalc/try/
   - Install: install.md
   - Walkthrough: walkthrough.md
   - CLI reference: cli-reference.md

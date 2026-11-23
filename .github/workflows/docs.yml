@@ -1,4 +1,7 @@
-# Builds and deploys the clincalc documentation site to GitHub Pages.
+# Builds and deploys the clincalc documentation site to GitHub Pages, with the
+# browser playground (the engine compiled to WebAssembly behind the desktop
+# GUI's frontend) at /try/. The two are independent builds that share one
+# Pages deploy and only link to each other.
 #
 # Method: artifact-based deploy (actions/upload-pages-artifact +
 # actions/deploy-pages). The built site is handed straight to GitHub's Pages
@@ -25,6 +28,16 @@ on:
       - "mkdocs.yml"
       - "requirements.txt"
       - ".github/workflows/docs.yml"
+      # The playground at /try/ is rebuilt whenever the engine, its WebAssembly
+      # bindings, or the shared frontend change.
+      - "src/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "clincalc-wasm/**"
+      - "gui/**"
+      - "!gui/src-tauri/**"
+      - "s/web-build"
+      - "s/web-wasm"
   workflow_dispatch:
 
 permissions:
@@ -54,6 +67,32 @@ jobs:
             zensical-
       - run: pip install -r requirements.txt
       - run: zensical build --clean
+
+      - name: Set up pinned Rust toolchain with the wasm32 target
+        shell: bash
+        run: |
+          rustup toolchain install --no-self-update
+          rustup target add wasm32-unknown-unknown
+          rustc --version
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: clincalc-wasm
+      # Must match the exact `wasm-bindgen` pin in clincalc-wasm/Cargo.toml;
+      # s/web-wasm fails loudly if they drift.
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: wasm-bindgen@0.2.130
+          fallback: none
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: gui/package-lock.json
+      - name: Install frontend dependencies
+        working-directory: gui
+        run: npm ci
+      - name: Build the playground into site/try
+        run: s/web-build site/try
 
       # Drop installer proxies at the site root so users can do
       #   curl -LsSf https://ohtf.github.io/clincalc/install.sh | sh

@@ -178,7 +178,7 @@ export function News2Calculator() {
         </Tooltip>
       </Group>
 
-      <Group align="stretch" gap="lg" wrap="nowrap">
+      <Group className="calc-columns" align="stretch" gap="lg" wrap="nowrap">
         <Card withBorder padding="lg" radius="lg" style={{ flex: 1 }}>
           <Stack gap="md">
             <SimpleGrid cols={2} spacing="md">

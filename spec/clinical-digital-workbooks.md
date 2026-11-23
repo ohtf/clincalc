@@ -2,7 +2,7 @@
 
 # Clinical Digital Workbooks (concept)
 
-**Status: speculative, future, not committed.** This document records an idea for a possible future product that would consume `clincalc` as a component, not a `clincalc` feature itself. Nothing here implies a decision to build it. It is written down now because the idea is good enough to lose if it only lives in conversation, and because `clincalc`'s own roadmap (`ENG-003` `clincalc-web`, `ENG-004` FHIR export, the calculator input-definitions system) already brushes up against the same territory from the engine side.
+**Status: speculative, future, not committed.** This document records an idea for a possible future product that would consume `clincalc` as a component, not a `clincalc` feature itself. Nothing here implies a decision to build it. It is written down now because the idea is good enough to lose if it only lives in conversation, and because `clincalc`'s own roadmap (`ENG-003` web playground, `ENG-004` FHIR export, the calculator input-definitions system) already brushes up against the same territory from the engine side.
 
 ## The idea
 

@@ -283,7 +283,7 @@ export function QdiabetesCalculator() {
         </Tooltip>
       </Group>
 
-      <Group align="stretch" gap="lg" wrap="nowrap">
+      <Group className="calc-columns" align="stretch" gap="lg" wrap="nowrap">
         <Card withBorder padding="lg" radius="lg" style={{ flex: 1.2 }}>
           <Stack gap="md">
             <SimpleGrid cols={3} spacing="md">

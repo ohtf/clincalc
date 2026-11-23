@@ -219,7 +219,7 @@ export function Cha2ds2VascCalculator() {
         </Tooltip>
       </Group>
 
-      <Group align="stretch" gap="lg" wrap="nowrap">
+      <Group className="calc-columns" align="stretch" gap="lg" wrap="nowrap">
         <Card withBorder padding="lg" radius="lg" style={{ flex: 1 }}>
           <Stack gap="md">
             <Group grow align="flex-end">

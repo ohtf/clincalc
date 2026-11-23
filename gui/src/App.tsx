@@ -20,6 +20,8 @@ import {
   useMantineColorScheme,
 } from "@mantine/core";
 import {
+  IconAlertTriangle,
+  IconBook,
   IconBrandGithub,
   IconLanguage,
   IconMoon,
@@ -32,9 +34,11 @@ import {
   calculate,
   compiledLocales,
   listCalculators,
+  runtime,
   type CalculationResponse,
   type CalcSummary,
 } from "./api/calc";
+import { EnginePanel } from "./EnginePanel";
 import { localeLabel, setLocale, textDirectionFor, useLocale } from "./locale";
 import { AcmiCalculator } from "./calculators/Acmi";
 import { Cha2ds2VascCalculator } from "./calculators/Cha2ds2Vasc";
@@ -76,6 +80,14 @@ const IMPLEMENTED: Record<string, () => ReactElement> = {
  */
 const FEATURED = ["feverpain", "cha2ds2vasc", "qrisk3"];
 
+const DEFAULT_CALCULATOR = "feverpain";
+
+const DOCS_URL = "https://ohtf.github.io/clincalc/";
+
+function calculatorFromHash(): string {
+  return decodeURIComponent(window.location.hash.slice(1)) || DEFAULT_CALCULATOR;
+}
+
 function ComingSoon({ calc }: { calc: CalcSummary }) {
   return (
     <Stack gap="md" maw={620}>
@@ -89,17 +101,45 @@ function ComingSoon({ calc }: { calc: CalcSummary }) {
         }}
       >
         <Text fw={600} mb={4}>
-          GUI coming soon
+          Form coming soon
         </Text>
         <Text size="sm" c="dimmed">
-          The scoring logic for this calculator already ships in the{" "}
-          <code>clincalc</code> CLI - the desktop UI is being built calculator
-          by calculator, each one hand-crafted so the form fits the clinical
-          question. Print its fillable input template with{" "}
-          <code>{`clincalc calc ${calc.name}`}</code>.
+          The scoring logic for this calculator already ships in the engine -
+          the forms are being built calculator by calculator, each one
+          hand-crafted so it fits the clinical question. Until then you can run
+          it below by filling in its input template, exactly as{" "}
+          <code>{`clincalc calc ${calc.name}`}</code> does on the command line.
         </Text>
       </Box>
     </Stack>
+  );
+}
+
+/**
+ * Shown on every page of the hosted browser build. Deliberately not
+ * dismissable: see regulatory/position-published-source-not-a-device.md
+ * section 6 - the web playground is demarcated as an evaluation tool.
+ */
+function PlaygroundNotice() {
+  return (
+    <Group
+      gap="xs"
+      px="lg"
+      h={36}
+      wrap="nowrap"
+      bg="var(--mantine-color-yellow-light)"
+      role="note"
+      aria-label="Evaluation playground notice"
+    >
+      <IconAlertTriangle size={16} style={{ flexShrink: 0 }} />
+      <Text size="xs" fw={600} truncate>
+        Evaluation playground - not for clinical decisions about real patients.
+        <Text span size="xs" fw={400} visibleFrom="sm" inherit>
+          {" "}
+          Everything runs in your browser; nothing you enter leaves this page.
+        </Text>
+      </Text>
+    </Group>
   );
 }
 
@@ -250,7 +290,7 @@ export default function App() {
   const locale = useLocale();
   const [calcs, setCalcs] = useState<CalcSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string>("feverpain");
+  const [selected, setSelected] = useState<string>(calculatorFromHash);
   const [query, setQuery] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -264,6 +304,20 @@ export default function App() {
     document.documentElement.lang = locale;
     document.documentElement.dir = textDirectionFor(locale);
   }, [locale]);
+
+  // `#name` in the URL selects a calculator, so a page can be bookmarked or
+  // linked to (the docs catalogue can deep-link to `try/#acmi`).
+  useEffect(() => {
+    const onHashChange = () => setSelected(calculatorFromHash());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  useEffect(() => {
+    if (calcs && !calcs.some((c) => c.name === selected)) {
+      setSelected(DEFAULT_CALCULATOR);
+    }
+  }, [calcs, selected]);
 
   const filtered = (calcs ?? []).filter((c) => {
     if (!query.trim()) return true;
@@ -286,13 +340,20 @@ export default function App() {
   const current = calcs?.find((c) => c.name === selected) ?? null;
   const Body = current && IMPLEMENTED[current.name];
   const selectCalculator = (name: string) => {
+    window.location.hash = encodeURIComponent(name);
     setSelected(name);
     setMobileNavOpen(false);
   };
 
+  useEffect(() => {
+    document.title = current ? `${current.title} - clincalc` : "clincalc";
+  }, [current]);
+
+  const web = runtime === "web";
+
   return (
     <AppShell
-      header={{ height: 56 }}
+      header={{ height: web ? 92 : 56 }}
       navbar={{
         width: 280,
         breakpoint: "sm",
@@ -301,8 +362,9 @@ export default function App() {
       padding="lg"
     >
       <AppShell.Header>
-        <Group h="100%" px="lg" justify="space-between">
-          <Group gap="sm">
+        {web && <PlaygroundNotice />}
+        <Group h={56} px="lg" justify="space-between" wrap="nowrap">
+          <Group gap="sm" wrap="nowrap">
             <Burger
               opened={mobileNavOpen}
               onClick={() => setMobileNavOpen((open) => !open)}
@@ -312,9 +374,22 @@ export default function App() {
             />
             <Brand />
           </Group>
-          <Group gap="xs">
-            <LocalePicker />
+          <Group gap="xs" wrap="nowrap">
+            <Box visibleFrom="sm">
+              <LocalePicker />
+            </Box>
             <ColorSchemeToggle />
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              component="a"
+              href={DOCS_URL}
+              target="_blank"
+              rel="noreferrer"
+              title="Documentation"
+            >
+              <IconBook size={18} />
+            </ActionIcon>
             <ActionIcon
               variant="subtle"
               color="gray"
@@ -420,9 +495,11 @@ export default function App() {
           </Center>
         )}
         {!error && current?.unavailable && <Unavailable calc={current} />}
-        {!error && current && !current.unavailable && Body && <Body />}
-        {!error && current && !current.unavailable && !Body && (
-          <ComingSoon calc={current} />
+        {!error && current && !current.unavailable && (
+          <Stack gap="xl">
+            {Body ? <Body key={current.name} /> : <ComingSoon calc={current} />}
+            <EnginePanel calc={current} crafted={!!Body} />
+          </Stack>
         )}
       </AppShell.Main>
     </AppShell>

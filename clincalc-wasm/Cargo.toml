@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2026 Marcus Baw and Baw Medical Ltd
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+[package]
+name = "clincalc-wasm"
+version = "0.5.0"
+edition = "2024"
+authors = ["Marcus Baw"]
+description = "WebAssembly bindings for clincalc - the browser playground's engine"
+license = "AGPL-3.0-or-later AND LGPL-3.0-or-later"
+repository = "https://github.com/ohtf/clincalc"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+clincalc = { path = "..", default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
+# Exact pin: the generated JS glue must match the `wasm-bindgen` CLI version
+# that s/web-wasm runs, or the bindings fail at load time. Bump together with
+# the `wasm-bindgen@` pins in .github/workflows/ci.yml and docs.yml.
+wasm-bindgen = "=0.2.130"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1

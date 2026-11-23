@@ -24,6 +24,17 @@ body,
     contain: layout paint;
 }
 
+/*
+ * Every calculator lays its form and result cards side by side. Stack them
+ * once the main pane (viewport minus the 280px sidebar) is too narrow for
+ * two readable columns - phones and tablets in the browser build.
+ */
+@media (max-width: 62em) {
+    .calc-columns {
+        flex-direction: column;
+    }
+}
+
 .sidebar-scroll {
     flex: 1;
     min-height: 0;

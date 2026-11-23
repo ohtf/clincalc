@@ -200,7 +200,7 @@ export function Phq9Calculator() {
         </Tooltip>
       </Group>
 
-      <Group align="stretch" gap="lg" wrap="nowrap">
+      <Group className="calc-columns" align="stretch" gap="lg" wrap="nowrap">
         <Card withBorder padding="lg" radius="lg" style={{ flex: 1.3 }}>
           <Stack gap="md">
             <Text fw={600}>

@@ -58,6 +58,24 @@ npm install
 
 You also need the Tauri system prerequisites for your operating system.
 
+## `s/web-dev`, `s/web-build`, `s/web-wasm`
+
+The browser playground: the engine compiled to WebAssembly behind the desktop GUI's frontend.
+
+```bash
+s/web-dev              # serve locally on http://127.0.0.1:5174
+s/web-build            # static build in gui/dist-web/
+s/web-build site/try   # build into the docs site, as the Pages deploy does
+```
+
+Both run `s/web-wasm` first, which compiles `clincalc-wasm/` for `wasm32-unknown-unknown` and generates its bindings in `clincalc-wasm/pkg/`. First-time setup:
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli --version 0.2.130 --locked   # must match clincalc-wasm/Cargo.toml
+cd gui && npm install
+```
+
 ## `s/version++`
 
 Cuts a release bump using the house-style CI auto-tag cascade:

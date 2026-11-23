@@ -123,6 +123,54 @@ jobs:
           maturin sdist --out "$RUNNER_TEMP/sdist"
           python -m pip wheel --no-deps "$RUNNER_TEMP"/sdist/*.tar.gz --wheel-dir "$RUNNER_TEMP/sdist-wheel"
 
+  web-playground:
+    name: Web playground (WebAssembly)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up pinned Rust toolchain with the wasm32 target
+        shell: bash
+        run: |
+          rustup toolchain install --no-self-update
+          rustup target add wasm32-unknown-unknown
+          rustc --version
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: clincalc-wasm
+
+      # Must match the exact `wasm-bindgen` pin in clincalc-wasm/Cargo.toml;
+      # s/web-wasm fails loudly if they drift.
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: wasm-bindgen@0.2.130
+          fallback: none
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: gui/package-lock.json
+
+      - name: Bindings crate - format, clippy, test
+        working-directory: clincalc-wasm
+        run: |
+          cargo fmt --check
+          cargo clippy --all-targets --locked -- -D warnings
+          cargo test --locked
+
+      - name: Install frontend dependencies
+        working-directory: gui
+        run: npm ci
+
+      # Compiles the engine to wasm32, type-checks the shared desktop/web
+      # frontend, and builds the static playground.
+      - name: Build the playground
+        run: s/web-build
+
   reuse:
     name: REUSE compliance
     runs-on: ubuntu-latest
@@ -156,6 +204,7 @@ jobs:
           cargo audit --deny unsound
           cargo audit --file python/Cargo.lock --deny unsound
           cargo audit --file gui/src-tauri/Cargo.lock --deny unsound
+          cargo audit --file clincalc-wasm/Cargo.lock --deny unsound
 
   workflow-security:
     name: GitHub Actions security

@@ -47,6 +47,7 @@ check_version() {
 
 check_version "Cargo.toml" "$(cargo_version Cargo.toml)"
 check_version "python/Cargo.toml" "$(cargo_version python/Cargo.toml)"
+check_version "clincalc-wasm/Cargo.toml" "$(cargo_version clincalc-wasm/Cargo.toml)"
 check_version "gui/src-tauri/Cargo.toml" "$(cargo_version gui/src-tauri/Cargo.toml)"
 check_version "gui/package.json" "$(jq -er '.version' gui/package.json)"
 check_version "gui/package-lock.json" "$(jq -er '.version' gui/package-lock.json)"
@@ -55,6 +56,8 @@ check_version "gui/src-tauri/tauri.conf.json" "$(jq -er '.version' gui/src-tauri
 check_version "Cargo.lock clincalc package" "$(lock_version Cargo.lock clincalc)"
 check_version "python/Cargo.lock clincalc package" "$(lock_version python/Cargo.lock clincalc)"
 check_version "python/Cargo.lock clincalc-py package" "$(lock_version python/Cargo.lock clincalc-py)"
+check_version "clincalc-wasm/Cargo.lock clincalc package" "$(lock_version clincalc-wasm/Cargo.lock clincalc)"
+check_version "clincalc-wasm/Cargo.lock clincalc-wasm package" "$(lock_version clincalc-wasm/Cargo.lock clincalc-wasm)"
 check_version "gui/src-tauri/Cargo.lock clincalc package" "$(lock_version gui/src-tauri/Cargo.lock clincalc)"
 check_version "gui/src-tauri/Cargo.lock calc-gui package" "$(lock_version gui/src-tauri/Cargo.lock calc-gui)"
 

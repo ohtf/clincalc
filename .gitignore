@@ -50,3 +50,10 @@ __pycache__/
 
 # Local-only private workspace
 /.private
+
+### Browser playground (WebAssembly)
+
+# wasm-bindgen output and the static web build (rebuilt by s/web-build).
+/clincalc-wasm/pkg/
+/clincalc-wasm/target/
+/gui/dist-web/

@@ -18,7 +18,8 @@ gui/
 │   ├── main.tsx           Mantine theme (teal, Lato)
 │   ├── App.tsx            AppShell + sidebar nav + filter + locale picker
 │   ├── App.css            Thin overrides on top of Mantine
-│   ├── api/calc.ts        Typed wrappers around Tauri invoke
+│   ├── api/calc.ts        Engine transport: Tauri invoke (desktop) or WebAssembly (web)
+│   ├── EnginePanel.tsx    "Under the hood" JSON contract panel under every calculator
 │   ├── locale.ts          Current-locale store, HTML lang/dir, RTL readiness
 │   └── calculators/
 │       ├── Acmi.tsx
@@ -77,6 +78,26 @@ s/gui-dev
 ```
 
 That runs the Tauri CLI, which boots Vite (port 5173) and the Rust backend together with hot reload on both sides.
+
+## Web playground (same frontend, WebAssembly engine)
+
+This frontend is also the browser playground at <https://ohtf.github.io/clincalc/try/>. `src/api/calc.ts` picks the transport at runtime: Tauri `invoke` on the desktop, `clincalc-wasm` (the engine compiled to WebAssembly, in `../clincalc-wasm/`) in a browser. See [`spec/gui.md`](../spec/gui.md#one-frontend-two-runtimes).
+
+One-off setup, in addition to `npm install`:
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli --version 0.2.130 --locked   # must match clincalc-wasm/Cargo.toml
+```
+
+Then:
+
+```bash
+s/web-dev            # http://127.0.0.1:5174, hot reload on the React side
+s/web-build          # static site in gui/dist-web/ (relative paths; serve from any subpath)
+```
+
+The Pages deploy (`.github/workflows/docs.yml`) runs `s/web-build site/try` after building the Zensical docs.
 
 ## Production build
 

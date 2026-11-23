@@ -1,23 +1,37 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// Vite is configured for Tauri 2: fixed dev port, no auto-open, file system
-// poll fallback for the src-tauri/ folder so backend rebuilds trigger reloads.
-// See https://tauri.app/v1/guides/getting-started/setup/vite for the canonical
-// shape; mirrors the gitehr GUI config.
+// One frontend, two targets. The default is the Tauri desktop app; with
+// CLINCALC_TARGET=web (set by s/web-build and s/web-dev) the same frontend is
+// built for the browser, with `clincalc-wasm` resolving to the engine compiled
+// to WebAssembly instead of a stub the desktop never calls.
+const web = process.env.CLINCALC_TARGET === "web";
+
+const wasmModule = web
+  ? "../clincalc-wasm/pkg/clincalc_wasm.js"
+  : "./src/api/wasm-unavailable.ts";
+
 export default defineConfig({
   plugins: [react()],
 
-  // Tauri serves the production frontend from the bundled app resources, not
-  // from an HTTP origin root. Keep all generated asset URLs relative so the
-  // webview can resolve JS/CSS/images correctly in packaged builds.
+  // Relative asset URLs serve both targets: Tauri loads the bundle from app
+  // resources rather than an origin root, and the web build is deployed under
+  // a subpath of the Pages site (/clincalc/try/).
   base: "./",
+
+  resolve: {
+    alias: {
+      "clincalc-wasm": fileURLToPath(new URL(wasmModule, import.meta.url)),
+    },
+  },
 
   // Prevent Vite from clearing the screen so we can see Rust compiler errors.
   clearScreen: false,
 
   server: {
-    port: 5173,
+    // Distinct ports so the desktop and web dev servers can run side by side.
+    port: web ? 5174 : 5173,
     strictPort: true,
     host: "127.0.0.1",
     watch: {
@@ -25,11 +39,10 @@ export default defineConfig({
       // watcher rebuilds the backend separately.
       ignored: ["**/src-tauri/**"],
     },
+    // The WebAssembly package is built outside the gui/ root.
+    fs: { allow: [".", "../clincalc-wasm/pkg"] },
   },
 
-  // For Tauri's bundled build: emit ES2022 (Tauri webviews on supported
-  // platforms all handle it) and use Vite's debug-friendly source maps in
-  // dev only.
   build: {
     target: "es2022",
     minify: !process.env.TAURI_DEBUG ? "oxc" : false,

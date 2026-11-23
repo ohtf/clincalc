@@ -347,7 +347,7 @@ export function Qrisk3Calculator() {
         </Tooltip>
       </Group>
 
-      <Group align="stretch" gap="lg" wrap="nowrap">
+      <Group className="calc-columns" align="stretch" gap="lg" wrap="nowrap">
         <Card withBorder padding="lg" radius="lg" style={{ flex: 1.35 }}>
           <Stack gap="md">
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">

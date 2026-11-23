@@ -119,6 +119,18 @@ mod tests {
     }
 
     #[test]
+    fn input_template_matches_the_cli_template() {
+        assert_eq!(
+            input_template("acmi", None).unwrap(),
+            clincalc::get("acmi").unwrap().input_template()
+        );
+        assert_eq!(
+            input_template("nope", None).unwrap_err(),
+            "unknown calculator: nope"
+        );
+    }
+
+    #[test]
     fn compiled_locales_lists_every_compiled_bundle() {
         assert_eq!(compiled_locales(), vec!["en", "es", "ca"]);
     }
@@ -137,6 +149,20 @@ fn calculate(
     let calc = clincalc::get(name).ok_or_else(|| format!("unknown calculator: {name}"))?;
     calc.calculate_for(&input, resolve_gui_locale(locale))
         .map_err(|e| e.to_string())
+}
+
+/// The fillable input template `clincalc calc <name>` prints.
+#[tauri::command]
+fn input_template(name: &str, locale: Option<&str>) -> Result<serde_json::Value, String> {
+    let calc = clincalc::get(name).ok_or_else(|| format!("unknown calculator: {name}"))?;
+    Ok(calc.input_template_for(resolve_gui_locale(locale)))
+}
+
+/// The `clincalc` version this app was built from (kept in lockstep with the
+/// engine by `s/check-release-version`).
+#[tauri::command]
+fn engine_version() -> &'static str {
+    env!("CARGO_PKG_VERSION")
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -160,7 +186,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             list_calculators,
             calculate,
-            compiled_locales
+            compiled_locales,
+            input_template,
+            engine_version
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

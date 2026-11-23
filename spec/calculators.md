@@ -15,7 +15,7 @@ A clinical-calculator suite driven by one engine, shippable in many shapes, is s
 - the **engine** (`default-features = false`) - the pure scoring engine and result schema; a leaf depending only on `serde` + `serde_json`.
 - the **`cli` feature** (on by default) - the `clincalc` binary plus the reusable `clincalc::cli` module (`CalcCommand` + `run`), embeddable by host CLIs.
 
-`clincalc-web` (single-file HTML calculators) is on the roadmap but deprioritised. A Tauri desktop GUI is the next major surface.
+A Tauri desktop GUI (`gui/`) and a browser playground share one React frontend: on the desktop it calls the engine through Tauri commands, in the browser through `clincalc-wasm/`, the engine compiled to WebAssembly. See [`gui.md`](gui.md).
 
 GitEHR (<https://github.com/gitehr/gitehr>) is a **downstream consumer** - its CLI forwards `gitehr calc` to `clincalc::cli::run`, and its MCP server exposes each calculator from `clincalc::all()` as a `clincalc_<name>` tool whose input schema is the calculator's own JSON Schema. Anyone else can embed `clincalc` the same way.
 
@@ -47,12 +47,13 @@ The defining decision is a single scoring engine reused everywhere, so a result 
                                        │ (every arrow points in)
         ┌───────────────┬──────────────┼──────────────┬──────────────────┐
         │               │              │              │                  │
-   ┌─────────┐   ┌────────────┐  ┌──────────┐  ┌────────────┐   ┌───────────────┐
-   │clincalc│   │ host MCP   │  │ host GUI │  │ standalone │   │  clincalc-web      │
-   │ (default)│  │ (e.g.      │  │ (e.g.    │  │ desktop    │   │  single-file   │
-   │  CLI    │  │  gitehr)   │  │  Tauri)  │  │ (planned,  │   │  HTML + bridge │
-   │          │  │            │  │          │  │  Tauri 2)  │   │  (deferred)    │
-   └────┬─────┘  └────────────┘  └──────────┘  └────────────┘   └───────────────┘
+   ┌──────────┐  ┌────────────┐  ┌──────────┐  ┌────────────┐   ┌───────────────┐
+   │ clincalc │  │ host MCP   │  │ host GUI │  │ desktop    │   │ web           │
+   │ (default)│  │ (e.g.      │  │ (e.g.    │  │ GUI        │   │ playground    │
+   │  CLI     │  │  gitehr)   │  │  Tauri)  │  │ (Tauri 2)  │   │ (WebAssembly) │
+   └────┬─────┘  └────────────┘  └──────────┘  └─────┬──────┘   └──────┬────────┘
+        │                                            └── one React ────┘
+        │                                                frontend
         │ reused verbatim
    ┌────┴───────────┐
    │ gitehr calc    │
@@ -77,7 +78,8 @@ clincalc/                             # repo root = Cargo workspace root
 │   ├── cli.rs                        #   CalcCommand + run()  (behind `cli` feature)
 │   └── main.rs                       #   thin standalone `clincalc` binary (`cli` feature)
 ├── tests/                            # integration tests (completions; gated on `cli`)
-├── clincalc-web/                         # single-file HTML calculators (deprioritised)
+├── clincalc-wasm/                    # wasm-bindgen bindings: the engine for the browser playground
+├── gui/                              # React frontend shared by the Tauri desktop app and the playground
 ├── docs/                             # Zensical docs site (deployed to GH Pages)
 ├── examples/                         # ready-to-pipe JSON inputs used in the docs
 └── spec/                             # this file plus roadmap and input-definitions
@@ -209,13 +211,13 @@ User-facing CLI documentation lives in [`docs/cli-reference.md`](../docs/cli-ref
 
 ---
 
-## Web frontend (`clincalc-web`) - deprioritised
+## Web playground (`clincalc-wasm` + the shared GUI frontend)
 
-The browser tools are single, self-contained HTML files with a shared context-detection bridge. The end-state is the same `clincalc` compiled to WebAssembly so the browser surface shares the engine; until then the inline JS logic must be validated against the `clincalc` test vectors. Not actively worked on - documented for completeness and for when it returns to the roadmap.
+The browser surface is the engine compiled to WebAssembly, not a reimplementation. `clincalc-wasm/` is a thin `wasm-bindgen` crate (excluded from the workspace, like `python/` and `gui/src-tauri/`) whose exports mirror the Tauri commands one for one, exchanging JSON strings. The desktop GUI's React frontend picks its transport at runtime (`gui/src/api/calc.ts`): Tauri `invoke` on the desktop, the WebAssembly module in a browser. So every hand-crafted calculator form ships to both surfaces at once, and there is no scoring logic in JavaScript to validate.
 
-### Result Card UI conventions (when it returns)
+It is deployed as a static site at `/clincalc/try/` inside the same GitHub Pages deploy as the Zensical docs. The two are independent builds that only link to each other, so neither depends on the other's tooling. `s/web-build` builds it; `s/web-dev` serves it locally.
 
-Every web calculator renders a result card, in this order: (1) score summary and interpretation, (2) a collapsible per-item breakdown, (3) an editable clipboard preview textarea (the copy button reads the textarea's value so clinician edits are preserved), (4) action buttons appropriate to the host context (Tauri save / iframe send / standalone copy).
+The playground is demarcated as an evaluation tool (`regulatory/position-published-source-not-a-device.md` section 6): a non-dismissable notice on every page says it is not for clinical decisions about real patients, and that nothing leaves the browser. Design details are in [`gui.md`](gui.md).
 
 ---
 
@@ -233,7 +235,7 @@ Any host that records results should do something similar; the engine itself sta
 
 1. Implement it in `clincalc`: a typed `Input`, a pure `compute()`, a `build_response()` adapter, a `Calculator` impl with `input_schema()` and `license()` (the distribution licence plus an evidence URL), and unit tests against known vectors. Register it in `all()`. This is the **only** Rust work needed - the CLI (`clincalc calc <name>`, template, `--schema`, `--license`, `--input`) and the MCP tool are both driven generically from the registry, so there is no per-calculator CLI or MCP code to write.
 2. (Optional) add a row to [`docs/calculators.md`](../docs/calculators.md) so it appears in the published catalogue.
-3. (When `clincalc-web` returns) create `clincalc-web/calculators/<name>.html` with its JS logic validated against the `clincalc` vectors.
+3. (Optional) hand-craft a form under `gui/src/calculators/` (see [`gui.md`](gui.md)); it appears in both the desktop GUI and the web playground. Without one, both still run the calculator through the engine panel's input template.
 
 The authoring workflow is intentionally repository-native: start with `AGENTS.md`, this spec, `spec/calculator-input-definitions.md`, and the committed JSON files in `examples/`. That path works for any coding agent and keeps calculator authoring independent of Claude-specific skills.
 
