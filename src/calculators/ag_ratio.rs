@@ -138,6 +138,10 @@ impl Calculator for AgRatio {
         json!({
             "$schema": "https://json-schema.org/draft/2020-12/schema", "title": "AgRatioInput", "type": "object", "additionalProperties": false,
             "required": ["total_protein", "albumin", "unit"],
+            "allOf": [
+                { "if": { "properties": { "unit": { "const": "g/L" } } }, "then": { "properties": { "total_protein": { "minimum": 20, "maximum": 140 }, "albumin": { "minimum": 2, "maximum": 140 } } } },
+                { "if": { "properties": { "unit": { "const": "g/dL" } } }, "then": { "properties": { "total_protein": { "minimum": 2, "maximum": 14 }, "albumin": { "minimum": 0.2, "maximum": 14 } } } }
+            ],
             "properties": {
                 "total_protein": { "type": "number", "description": "Total serum protein, in the unit given by unit" },
                 "albumin": { "type": "number", "description": "Serum albumin, same unit as total_protein; must be lower than total_protein" },

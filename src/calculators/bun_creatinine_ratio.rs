@@ -158,6 +158,12 @@ impl Calculator for BunCreatinineRatio {
         json!({
             "$schema": "https://json-schema.org/draft/2020-12/schema", "title": "BunCreatinineRatioInput", "type": "object", "additionalProperties": false,
             "required": ["urea", "urea_unit", "creatinine", "creatinine_unit"],
+            "allOf": [
+                { "if": { "properties": { "urea_unit": { "const": "mmol/L" } } }, "then": { "properties": { "urea": { "minimum": 0.5, "maximum": 60 } } } },
+                { "if": { "properties": { "urea_unit": { "const": "mg/dL" } } }, "then": { "properties": { "urea": { "minimum": 1.4, "maximum": 168 } } } },
+                { "if": { "properties": { "creatinine_unit": { "const": "umol/L" } } }, "then": { "properties": { "creatinine": { "minimum": 10, "maximum": 2000 } } } },
+                { "if": { "properties": { "creatinine_unit": { "const": "mg/dL" } } }, "then": { "properties": { "creatinine": { "minimum": 0.11, "maximum": 22.6 } } } }
+            ],
             "properties": {
                 "urea": { "type": "number", "description": "Serum urea or BUN, in the unit given by urea_unit" },
                 "urea_unit": { "type": "string", "enum": ["mmol/L", "mg/dL"], "description": "mmol/L reports urea (UK/SI); mg/dL reports blood urea nitrogen (US)" },

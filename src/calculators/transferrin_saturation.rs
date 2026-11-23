@@ -130,6 +130,10 @@ impl Calculator for TransferrinSaturation {
         json!({
             "$schema": "https://json-schema.org/draft/2020-12/schema", "title": "TransferrinSaturationInput", "type": "object", "additionalProperties": false,
             "required": ["serum_iron", "tibc", "unit"],
+            "allOf": [
+                { "if": { "properties": { "unit": { "const": "ug/dL" } } }, "then": { "properties": { "serum_iron": { "minimum": 5, "maximum": 500 }, "tibc": { "minimum": 50, "maximum": 700 } } } },
+                { "if": { "properties": { "unit": { "const": "umol/L" } } }, "then": { "properties": { "serum_iron": { "minimum": 0.9, "maximum": 89.5 }, "tibc": { "minimum": 9, "maximum": 125 } } } }
+            ],
             "properties": {
                 "serum_iron": { "type": "number", "description": "Serum iron, in the unit given by unit" },
                 "tibc": { "type": "number", "description": "Total iron-binding capacity, same unit as serum_iron" },

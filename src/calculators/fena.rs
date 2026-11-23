@@ -22,6 +22,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
+pub use super::fractional_excretion::CreatinineUnit;
+use super::fractional_excretion::{align_pair, unit_schema};
 use crate::calculator::{CalcError, Calculator};
 use crate::license::CalculatorLicense;
 use crate::response::CalculationResponse;
@@ -47,11 +49,16 @@ pub struct FenaInput {
     pub urine_creatinine: f64,
     /// Plasma creatinine (any unit, but same as urine_creatinine)
     pub plasma_creatinine: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub urine_creatinine_unit: Option<CreatinineUnit>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plasma_creatinine_unit: Option<CreatinineUnit>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FenaOutcome {
     pub fena_percent: f64,
+    pub category: &'static str,
     pub interpretation: String,
 }
 
@@ -77,26 +84,51 @@ pub fn compute(input: &FenaInput) -> Result<FenaOutcome, CalcError> {
         ));
     }
 
-    let fena = (input.urine_sodium * input.plasma_creatinine)
-        / (input.plasma_sodium * input.urine_creatinine)
-        * 100.0;
+    let (urine_cr, plasma_cr) = align_pair(
+        input.urine_creatinine,
+        input.plasma_creatinine,
+        input.urine_creatinine_unit.map(CreatinineUnit::factor),
+        input.plasma_creatinine_unit.map(CreatinineUnit::factor),
+        "creatinine",
+    )?;
+    let fena = (input.urine_sodium * plasma_cr) / (input.plasma_sodium * urine_cr) * 100.0;
+    if !fena.is_finite() || fena == 0.0 {
+        return Err(CalcError::InvalidInput(
+            "FENa is outside the calculable range; check the measurements and units".into(),
+        ));
+    }
 
-    let category = if fena < 1.0 {
-        "pre-renal aetiology (or conditions causing low FENa with intrinsic disease: contrast nephropathy, myoglobinuria, early obstruction)"
+    let (category, meaning) = if fena > 100.0 {
+        (
+            "check_inputs",
+            "above 100%; check the units and that samples are paired. No clinical classification is given",
+        )
+    } else if fena < 1.0 {
+        (
+            "pre_renal",
+            "consistent with pre-renal aetiology, or certain other conditions (contrast nephropathy, myoglobinuria, early obstruction)",
+        )
     } else if fena <= 2.0 {
-        "indeterminate - clinical context and trend are required"
+        (
+            "indeterminate",
+            "indeterminate; clinical context and trend are required",
+        )
     } else {
-        "intrinsic renal failure (e.g. acute tubular necrosis)"
+        (
+            "intrinsic",
+            "consistent with intrinsic renal failure (e.g. acute tubular necrosis)",
+        )
     };
 
     let interpretation = format!(
-        "FENa {:.2}% - consistent with {}. Note: FENa is unreliable after diuretics, in CKD, \
+        "FENa {:.2}% - {}. Note: FENa is unreliable after diuretics, in CKD, \
 non-oliguric ATN, or early obstruction. Consider FEUrea in patients on diuretics.",
-        fena, category
+        fena, meaning
     );
 
     Ok(FenaOutcome {
         fena_percent: fena,
+        category,
         interpretation,
     })
 }
@@ -105,6 +137,7 @@ pub fn build_response(input: &FenaInput) -> Result<CalculationResponse, CalcErro
     let o = compute(input)?;
 
     let mut working = Map::new();
+    working.insert("category".into(), json!(o.category));
     working.insert(
         "fena_percent".into(),
         json!(format!("{:.2}", o.fena_percent)),
@@ -149,7 +182,13 @@ impl Calculator for Fena {
             "type": "object",
             "additionalProperties": false,
             "required": ["urine_sodium", "plasma_sodium", "urine_creatinine", "plasma_creatinine"],
+            "dependentRequired": {
+                "urine_creatinine_unit": ["plasma_creatinine_unit"],
+                "plasma_creatinine_unit": ["urine_creatinine_unit"]
+            },
             "properties": {
+                "urine_creatinine_unit": unit_schema(&CreatinineUnit::FACTORS, "Unit as reported for urine creatinine. Omit both creatinine units only for a matched-unit pair."),
+                "plasma_creatinine_unit": unit_schema(&CreatinineUnit::FACTORS, "Unit as reported for plasma creatinine. Omit both creatinine units only for a matched-unit pair."),
                 "urine_sodium": {
                     "type": "number",
                     "exclusiveMinimum": 0,
@@ -163,12 +202,12 @@ impl Calculator for Fena {
                 "urine_creatinine": {
                     "type": "number",
                     "exclusiveMinimum": 0,
-                    "description": "Urine creatinine (any unit, must match plasma_creatinine unit)"
+                    "description": "Urine creatinine. Must match the plasma unit if no creatinine units are supplied."
                 },
                 "plasma_creatinine": {
                     "type": "number",
                     "exclusiveMinimum": 0,
-                    "description": "Plasma/serum creatinine (same unit as urine_creatinine)"
+                    "description": "Plasma/serum creatinine. Must match the urine unit if no creatinine units are supplied."
                 }
             }
         })
@@ -191,7 +230,22 @@ mod tests {
             plasma_sodium: p_na,
             urine_creatinine: u_cr,
             plasma_creatinine: p_cr,
+            urine_creatinine_unit: None,
+            plasma_creatinine_unit: None,
         }
+    }
+
+    #[test]
+    fn mixed_units_are_converted_and_anomalous_legacy_pair_is_not_classified() {
+        let mut i = inp(40.0, 135.0, 5.0, 300.0);
+        assert_eq!(compute(&i).unwrap().category, "check_inputs");
+        i.urine_creatinine_unit = Some(CreatinineUnit::MmolL);
+        assert!(compute(&i).is_err());
+        i.plasma_creatinine_unit = Some(CreatinineUnit::UmolL);
+        assert_eq!(
+            compute(&i).unwrap(),
+            compute(&inp(40.0, 135.0, 5000.0, 300.0)).unwrap()
+        );
     }
 
     #[test]

@@ -7,6 +7,8 @@ import { IconTestPipe2 } from "@tabler/icons-react";
 
 import {
   CalculatorPage,
+  ChoiceField,
+  CREATININE_UNITS,
   inRange,
   NumberField,
   ScoreTile,
@@ -14,20 +16,35 @@ import {
   summaryText,
   useCalculation,
   type CalculatorModule,
+  type Choice,
+  type CreatinineUnit,
 } from "../kit";
 
 /** Fractional excretion of urea (Carvounis, Kidney Int 2002). */
 
 const positive = (v: number | null): v is number => inRange(v, 0) && v > 0;
+type UreaUnit = "mmol_l" | "urea_mg_dl" | "urea_nitrogen_mg_dl";
+const UREA_UNITS: Choice<UreaUnit>[] = [
+  { value: "mmol_l", label: "Urea mmol/L" },
+  { value: "urea_mg_dl", label: "Urea mg/dL" },
+  { value: "urea_nitrogen_mg_dl", label: "Urea nitrogen mg/dL" },
+];
+const unitLabel = <T extends string>(options: Choice<T>[], value: T | null) =>
+  options.find((u) => u.value === value)?.label ?? "";
 
 function FeureaCalculator() {
   const [urineUrea, setUrineUrea] = useState<number | null>(null);
   const [plasmaUrea, setPlasmaUrea] = useState<number | null>(null);
   const [urineCr, setUrineCr] = useState<number | null>(null);
   const [plasmaCr, setPlasmaCr] = useState<number | null>(null);
+  const [urineCrUnit, setUrineCrUnit] = useState<CreatinineUnit | null>(null);
+  const [plasmaCrUnit, setPlasmaCrUnit] = useState<CreatinineUnit | null>(null);
+  const [urineUreaUnit, setUrineUreaUnit] = useState<UreaUnit | null>(null);
+  const [plasmaUreaUnit, setPlasmaUreaUnit] = useState<UreaUnit | null>(null);
 
   const complete =
-    positive(urineUrea) && positive(plasmaUrea) && positive(urineCr) && positive(plasmaCr);
+    positive(urineUrea) && positive(plasmaUrea) && positive(urineCr) && positive(plasmaCr) &&
+    urineCrUnit !== null && plasmaCrUnit !== null && urineUreaUnit !== null && plasmaUreaUnit !== null;
   const calc = useCalculation(
     "feurea",
     complete
@@ -36,6 +53,10 @@ function FeureaCalculator() {
           plasma_urea: plasmaUrea,
           urine_creatinine: urineCr,
           plasma_creatinine: plasmaCr,
+          urine_creatinine_unit: urineCrUnit,
+          plasma_creatinine_unit: plasmaCrUnit,
+          urine_urea_unit: urineUreaUnit,
+          plasma_urea_unit: plasmaUreaUnit,
         }
       : null,
   );
@@ -51,46 +72,49 @@ function FeureaCalculator() {
         setPlasmaUrea(null);
         setUrineCr(null);
         setPlasmaCr(null);
+        setUrineCrUnit(null);
+        setPlasmaCrUnit(null);
+        setUrineUreaUnit(null);
+        setPlasmaUreaUnit(null);
       }}
       calc={calc}
-      incomplete="Enter all four values, each above zero, to calculate."
+      incomplete="Enter all four values above zero and select the unit for each."
       form={
         <>
           <Text size="xs" c="dimmed">
-            Use paired urine and plasma samples. Units cancel out, but each pair must share a unit:
-            both urea values in the same unit, and both creatinine values in the same unit. UK
-            laboratories often report urine creatinine in mmol/L and plasma creatinine in µmol/L (1
-            mmol/L = 1000 µmol/L).
+            Use paired urine and plasma samples. Select each unit as reported by the lab, distinguishing urea from urea nitrogen (BUN or UUN).
           </Text>
           <SimpleGrid cols={2} spacing="md">
             <NumberField
               label="Urine urea"
-              hint="Same unit as plasma urea."
               value={urineUrea}
               onChange={setUrineUrea}
               min={0}
             />
             <NumberField
               label="Plasma urea"
-              hint="Same unit as urine urea."
               value={plasmaUrea}
               onChange={setPlasmaUrea}
               min={0}
             />
             <NumberField
               label="Urine creatinine"
-              hint="Same unit as plasma creatinine."
               value={urineCr}
               onChange={setUrineCr}
               min={0}
             />
             <NumberField
               label="Plasma creatinine"
-              hint="Same unit as urine creatinine."
               value={plasmaCr}
               onChange={setPlasmaCr}
               min={0}
             />
+          </SimpleGrid>
+          <SimpleGrid cols={2} spacing="md">
+            <ChoiceField label="Urine urea unit" value={urineUreaUnit} onChange={setUrineUreaUnit} options={UREA_UNITS} />
+            <ChoiceField label="Plasma urea unit" value={plasmaUreaUnit} onChange={setPlasmaUreaUnit} options={UREA_UNITS} />
+            <ChoiceField label="Urine creatinine unit" value={urineCrUnit} onChange={setUrineCrUnit} options={CREATININE_UNITS} layout="inline" />
+            <ChoiceField label="Plasma creatinine unit" value={plasmaCrUnit} onChange={setPlasmaCrUnit} options={CREATININE_UNITS} layout="inline" />
           </SimpleGrid>
         </>
       }
@@ -101,8 +125,10 @@ function FeureaCalculator() {
           interpretation: r.interpretation,
           findingsTitle: "Measurements",
           findings: [
-            `Urine urea ${urineUrea} and plasma urea ${plasmaUrea} (same unit)`,
-            `Urine creatinine ${urineCr} and plasma creatinine ${plasmaCr} (same unit)`,
+            `Urine ${urineUrea} (${unitLabel(UREA_UNITS, urineUreaUnit)})`,
+            `Plasma ${plasmaUrea} (${unitLabel(UREA_UNITS, plasmaUreaUnit)})`,
+            `Urine creatinine ${urineCr} ${unitLabel(CREATININE_UNITS, urineCrUnit)}`,
+            `Plasma creatinine ${plasmaCr} ${unitLabel(CREATININE_UNITS, plasmaCrUnit)}`,
           ],
         })
       }

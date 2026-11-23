@@ -137,17 +137,29 @@ impl Calculator for AaGradient {
     fn input_schema(&self) -> Value {
         json!({
             "$schema": "https://json-schema.org/draft/2020-12/schema", "title": "AaGradientInput", "type": "object", "additionalProperties": false,
-            "required": ["fio2", "paco2_mm_hg", "pao2_mm_hg"],
+            "required": ["fio2"],
+            "allOf": [
+                { "oneOf": [{ "required": ["paco2_mm_hg"] }, { "required": ["paco2_kpa"] }] },
+                { "oneOf": [{ "required": ["pao2_mm_hg"] }, { "required": ["pao2_kpa"] }] }
+            ],
             "properties": {
                 "fio2": { "type": "number", "minimum": 0.21, "maximum": 1.0, "description": "Fraction of inspired oxygen; 0.21 is room air" },
                 "paco2_mm_hg": { "type": "number", "minimum": 10, "maximum": 100 },
                 "pao2_mm_hg": { "type": "number", "minimum": 20, "maximum": 650, "description": "Measured arterial oxygen tension from the same blood gas" },
+                "paco2_kpa": { "type": "number", "minimum": 10.0 / super::blood_gas::MMHG_PER_KPA, "maximum": 100.0 / super::blood_gas::MMHG_PER_KPA, "description": "Arterial carbon dioxide tension in kPa, instead of paco2_mm_hg" },
+                "pao2_kpa": { "type": "number", "minimum": 20.0 / super::blood_gas::MMHG_PER_KPA, "maximum": 650.0 / super::blood_gas::MMHG_PER_KPA, "description": "Arterial oxygen tension in kPa, instead of pao2_mm_hg. Results remain in mmHg." },
                 "age_years": { "type": "number", "minimum": 0, "maximum": 120, "description": "Optional; enables the age-adjusted expected room-air gradient (fio2 must be 0.21)" }
             }
         })
     }
     fn calculate(&self, input: &Value) -> Result<CalculationResponse, CalcError> {
-        let parsed: AaGradientInput = serde_json::from_value(input.clone())
+        let mut input = input
+            .as_object()
+            .cloned()
+            .ok_or_else(|| CalcError::InvalidInput("Expected an input object".into()))?;
+        super::blood_gas::convert_kpa(&mut input, "paco2_kpa", "paco2_mm_hg", 10.0, 100.0)?;
+        super::blood_gas::convert_kpa(&mut input, "pao2_kpa", "pao2_mm_hg", 20.0, 650.0)?;
+        let parsed: AaGradientInput = serde_json::from_value(Value::Object(input))
             .map_err(|e| CalcError::InvalidInput(e.to_string()))?;
         build_response(&parsed)
     }
@@ -156,6 +168,21 @@ impl Calculator for AaGradient {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn accepts_kpa_and_rejects_duplicate_pressure() {
+        let mut i = json!({"fio2": 0.21, "paco2_kpa": 40.0 / super::super::blood_gas::MMHG_PER_KPA,
+            "pao2_kpa": 90.0 / super::super::blood_gas::MMHG_PER_KPA});
+        let r = AaGradient.calculate(&i).unwrap();
+        assert_eq!(
+            r,
+            AaGradient
+                .calculate(&json!({"fio2": 0.21, "paco2_mm_hg": 40, "pao2_mm_hg": 90}))
+                .unwrap()
+        );
+        i["pao2_mm_hg"] = json!(90);
+        assert!(AaGradient.calculate(&i).is_err());
+    }
 
     #[test]
     fn normal_room_air_gas() {

@@ -8,6 +8,7 @@ export { ChoiceField, inRange, NumberField, YesNoField, type Choice } from "./fi
 export { asNumber, asText, compact, fmt, summaryText } from "./format";
 export { Facts, ScoreTile } from "./result";
 export { useCalculation, type Calculation } from "./useCalculation";
+export { BLOOD_GAS_UNITS, CREATININE_UNITS, pressureInUnit, type BloodGasUnit, type CreatinineUnit } from "./units";
 
 /**
  * What each file in `src/calculators/` exports as `calculator`, so it is

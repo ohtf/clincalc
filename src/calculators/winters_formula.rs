@@ -63,14 +63,14 @@ pub struct WintersFormulaOutcome {
 }
 
 pub fn compute(input: &WintersFormulaInput) -> Result<WintersFormulaOutcome, CalcError> {
-    if !input.bicarbonate_mmol_l.is_finite() || input.bicarbonate_mmol_l <= 0.0 {
+    if !(input.bicarbonate_mmol_l > 0.0 && input.bicarbonate_mmol_l <= 50.0) {
         return Err(CalcError::InvalidInput(
-            "bicarbonate_mmol_l must be a positive finite number".into(),
+            "Bicarbonate must be above 0 and at most 50 mmol/L".into(),
         ));
     }
-    if !input.measured_paco2_mmhg.is_finite() || input.measured_paco2_mmhg <= 0.0 {
+    if !(input.measured_paco2_mmhg > 0.0 && input.measured_paco2_mmhg <= 150.0) {
         return Err(CalcError::InvalidInput(
-            "measured_paco2_mmhg must be a positive finite number".into(),
+            "Measured PaCO2 must be above 0 and at most 150 mmHg or the kPa equivalent".into(),
         ));
     }
 
@@ -159,15 +159,28 @@ impl Calculator for WintersFormula {
     fn input_schema(&self) -> Value {
         json!({
             "$schema": "https://json-schema.org/draft/2020-12/schema", "title": "WintersFormulaInput", "type": "object",
-            "additionalProperties": false, "required": ["bicarbonate_mmol_l", "measured_paco2_mmhg"],
+            "additionalProperties": false, "required": ["bicarbonate_mmol_l"],
+            "oneOf": [{ "required": ["measured_paco2_mmhg"] }, { "required": ["measured_paco2_kpa"] }],
             "properties": {
                 "bicarbonate_mmol_l": { "type": "number", "exclusiveMinimum": 0, "maximum": 50, "description": "Serum bicarbonate (HCO3-) in mEq/L (mmol/L)" },
-                "measured_paco2_mmhg": { "type": "number", "exclusiveMinimum": 0, "maximum": 150, "description": "Measured arterial PaCO2 in mmHg, from the same arterial blood gas" }
+                "measured_paco2_mmhg": { "type": "number", "exclusiveMinimum": 0, "maximum": 150, "description": "Measured arterial PaCO2 in mmHg, from the same arterial blood gas" },
+                "measured_paco2_kpa": { "type": "number", "exclusiveMinimum": 0, "maximum": 150.0 / super::blood_gas::MMHG_PER_KPA, "description": "Alternative to measured_paco2_mmhg: measured arterial PaCO2 in kPa. Result remains in mmHg." }
             }
         })
     }
     fn calculate(&self, input: &Value) -> Result<CalculationResponse, CalcError> {
-        let parsed: WintersFormulaInput = serde_json::from_value(input.clone())
+        let mut input = input
+            .as_object()
+            .cloned()
+            .ok_or_else(|| CalcError::InvalidInput("Expected an input object".into()))?;
+        super::blood_gas::convert_kpa(
+            &mut input,
+            "measured_paco2_kpa",
+            "measured_paco2_mmhg",
+            0.0,
+            150.0,
+        )?;
+        let parsed: WintersFormulaInput = serde_json::from_value(Value::Object(input))
             .map_err(|e| CalcError::InvalidInput(e.to_string()))?;
         build_response(&parsed)
     }
@@ -182,6 +195,17 @@ mod tests {
             bicarbonate_mmol_l: hco3,
             measured_paco2_mmhg: paco2,
         }
+    }
+
+    #[test]
+    fn accepts_kpa_as_alternative_not_as_an_additional_value() {
+        let mut i = json!({"bicarbonate_mmol_l": 16, "measured_paco2_kpa": 32.0 / super::super::blood_gas::MMHG_PER_KPA});
+        assert_eq!(
+            WintersFormula.calculate(&i).unwrap(),
+            build_response(&input(16.0, 32.0)).unwrap()
+        );
+        i["measured_paco2_mmhg"] = json!(32);
+        assert!(WintersFormula.calculate(&i).is_err());
     }
 
     #[test]

@@ -7,6 +7,8 @@ import { IconSalt } from "@tabler/icons-react";
 
 import {
   CalculatorPage,
+  ChoiceField,
+  CREATININE_UNITS,
   inRange,
   NumberField,
   ScoreTile,
@@ -14,6 +16,7 @@ import {
   summaryText,
   useCalculation,
   type CalculatorModule,
+  type CreatinineUnit,
 } from "../kit";
 
 /** Fractional excretion of sodium (Espinel, JAMA 1976). */
@@ -25,9 +28,12 @@ function FenaCalculator() {
   const [plasmaNa, setPlasmaNa] = useState<number | null>(null);
   const [urineCr, setUrineCr] = useState<number | null>(null);
   const [plasmaCr, setPlasmaCr] = useState<number | null>(null);
+  const [urineCrUnit, setUrineCrUnit] = useState<CreatinineUnit | null>(null);
+  const [plasmaCrUnit, setPlasmaCrUnit] = useState<CreatinineUnit | null>(null);
 
   const complete =
-    positive(urineNa) && positive(plasmaNa) && positive(urineCr) && positive(plasmaCr);
+    positive(urineNa) && positive(plasmaNa) && positive(urineCr) && positive(plasmaCr) &&
+    urineCrUnit !== null && plasmaCrUnit !== null;
   const calc = useCalculation(
     "fena",
     complete
@@ -36,6 +42,8 @@ function FenaCalculator() {
           plasma_sodium: plasmaNa,
           urine_creatinine: urineCr,
           plasma_creatinine: plasmaCr,
+          urine_creatinine_unit: urineCrUnit,
+          plasma_creatinine_unit: plasmaCrUnit,
         }
       : null,
   );
@@ -51,15 +59,15 @@ function FenaCalculator() {
         setPlasmaNa(null);
         setUrineCr(null);
         setPlasmaCr(null);
+        setUrineCrUnit(null);
+        setPlasmaCrUnit(null);
       }}
       calc={calc}
-      incomplete="Enter all four values, each above zero, to calculate."
+      incomplete="Enter all four values above zero and select both creatinine units."
       form={
         <>
           <Text size="xs" c="dimmed">
-            Use paired urine and plasma samples. The creatinine unit cancels out, but both
-            creatinine values must be in the same unit: UK laboratories often report urine
-            creatinine in mmol/L and plasma creatinine in µmol/L (1 mmol/L = 1000 µmol/L).
+            Use paired urine and plasma samples. Select each creatinine unit as reported by the lab.
           </Text>
           <SimpleGrid cols={2} spacing="md">
             <NumberField
@@ -78,18 +86,20 @@ function FenaCalculator() {
             />
             <NumberField
               label="Urine creatinine"
-              hint="Same unit as plasma creatinine."
               value={urineCr}
               onChange={setUrineCr}
               min={0}
             />
             <NumberField
               label="Plasma creatinine"
-              hint="Same unit as urine creatinine."
               value={plasmaCr}
               onChange={setPlasmaCr}
               min={0}
             />
+          </SimpleGrid>
+          <SimpleGrid cols={2} spacing="md">
+            <ChoiceField label="Urine creatinine unit" value={urineCrUnit} onChange={setUrineCrUnit} options={CREATININE_UNITS} layout="inline" />
+            <ChoiceField label="Plasma creatinine unit" value={plasmaCrUnit} onChange={setPlasmaCrUnit} options={CREATININE_UNITS} layout="inline" />
           </SimpleGrid>
         </>
       }
@@ -102,7 +112,8 @@ function FenaCalculator() {
           findings: [
             `Urine sodium ${urineNa} mmol/L`,
             `Plasma sodium ${plasmaNa} mmol/L`,
-            `Urine creatinine ${urineCr} and plasma creatinine ${plasmaCr} (same unit)`,
+            `Urine creatinine ${urineCr} ${CREATININE_UNITS.find((u) => u.value === urineCrUnit)?.label ?? ""}`,
+            `Plasma creatinine ${plasmaCr} ${CREATININE_UNITS.find((u) => u.value === plasmaCrUnit)?.label ?? ""}`,
           ],
         })
       }

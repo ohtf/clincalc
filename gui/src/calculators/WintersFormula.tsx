@@ -7,15 +7,19 @@ import { IconLungs } from "@tabler/icons-react";
 
 import {
   CalculatorPage,
+  BLOOD_GAS_UNITS,
+  ChoiceField,
   Facts,
   inRange,
   NumberField,
   ScoreTile,
   asText,
   fmt,
+  pressureInUnit,
   summaryText,
   useCalculation,
   type CalculatorModule,
+  type BloodGasUnit,
 } from "../kit";
 
 /** Winters' formula for expected PaCO2 in metabolic acidosis (Albert, Dell & Winters 1967). */
@@ -34,15 +38,17 @@ const verdictOf = (v: unknown) => VERDICT[asText(v)] ?? asText(v);
 function WintersFormulaCalculator() {
   const [bicarbonate, setBicarbonate] = useState<number | null>(null);
   const [paco2, setPaco2] = useState<number | null>(null);
+  const [unit, setUnit] = useState<BloodGasUnit | null>(null);
+  const maxPaco2 = pressureInUnit(PACO2.max, unit);
 
   const complete =
     inRange(bicarbonate, BICARBONATE.above, BICARBONATE.max) &&
     bicarbonate > BICARBONATE.above &&
-    inRange(paco2, PACO2.above, PACO2.max) &&
+    unit !== null && inRange(paco2, PACO2.above, maxPaco2) &&
     paco2 > PACO2.above;
   const calc = useCalculation(
     "winters_formula",
-    complete ? { bicarbonate_mmol_l: bicarbonate, measured_paco2_mmhg: paco2 } : null,
+    complete ? { bicarbonate_mmol_l: bicarbonate, [unit === "kPa" ? "measured_paco2_kpa" : "measured_paco2_mmhg"]: paco2 } : null,
   );
 
   return (
@@ -54,12 +60,13 @@ function WintersFormulaCalculator() {
       onReset={() => {
         setBicarbonate(null);
         setPaco2(null);
+        setUnit(null);
       }}
       calc={calc}
       incomplete={
         bicarbonate === 0 || paco2 === 0
           ? "Bicarbonate and PaCO2 must be above zero."
-          : "Enter bicarbonate and PaCO2 from the same arterial blood gas."
+          : "Enter bicarbonate and PaCO2 from the same arterial blood gas and select the PaCO2 unit."
       }
       form={
         <SimpleGrid cols={2} spacing="md">
@@ -74,13 +81,14 @@ function WintersFormulaCalculator() {
           />
           <NumberField
             label="Measured PaCO2"
-            hint="Arterial, from the same blood gas, in mmHg (1 kPa = 7.5 mmHg)."
-            unit="mmHg"
+            hint="Arterial, from the same blood gas."
+            unit={unit ?? undefined}
             value={paco2}
             onChange={setPaco2}
             min={PACO2.above}
-            max={PACO2.max}
+            max={maxPaco2}
           />
+          <ChoiceField label="PaCO2 unit" value={unit} onChange={(value) => { if (unit !== null) setPaco2(null); setUnit(value); }} options={BLOOD_GAS_UNITS} layout="inline" />
         </SimpleGrid>
       }
       result={(r) => (
@@ -97,7 +105,7 @@ function WintersFormulaCalculator() {
               "Expected range",
               `${fmt(r.working.expected_range_low_mmhg)}-${fmt(r.working.expected_range_high_mmhg)} mmHg`,
             ],
-            ["Measured", `${paco2} mmHg`],
+            ["Measured", `${paco2} ${unit}`],
           ]}
         />
       )}
@@ -106,7 +114,7 @@ function WintersFormulaCalculator() {
           heading: `Winters' formula: expected PaCO2 ${fmt(r.working.expected_range_low_mmhg)}-${fmt(r.working.expected_range_high_mmhg)} mmHg; ${verdictOf(r.working.verdict).toLowerCase()}`,
           interpretation: r.interpretation,
           findingsTitle: "Arterial blood gas",
-          findings: [`Bicarbonate ${bicarbonate} mmol/L`, `PaCO2 ${paco2} mmHg`],
+          findings: [`Bicarbonate ${bicarbonate} mmol/L`, `PaCO2 ${paco2} ${unit}`],
         })
       }
     />

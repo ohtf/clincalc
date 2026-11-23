@@ -49,22 +49,22 @@ pub struct SerumOsmolalityOutcome {
 }
 
 pub fn compute(input: &SerumOsmolalityInput) -> Result<SerumOsmolalityOutcome, CalcError> {
-    for (name, value) in [
-        ("sodium_mmol_l", input.sodium_mmol_l),
-        ("glucose_mmol_l", input.glucose_mmol_l),
-        ("urea_mmol_l", input.urea_mmol_l),
+    for (name, value, max) in [
+        ("Sodium", input.sodium_mmol_l, 220.0),
+        ("Glucose", input.glucose_mmol_l, 100.0),
+        ("Urea", input.urea_mmol_l, 100.0),
     ] {
-        if !value.is_finite() || value < 0.0 {
+        if !(0.0..=max).contains(&value) {
             return Err(CalcError::InvalidInput(format!(
-                "{name} must be a non-negative finite number"
+                "{name} must be between 0 and {max} mmol/L"
             )));
         }
     }
     if let Some(measured) = input.measured_osmolality_mosm_kg
-        && (!measured.is_finite() || measured < 0.0)
+        && !(0.0..=500.0).contains(&measured)
     {
         return Err(CalcError::InvalidInput(
-            "measured_osmolality_mosm_kg must be a non-negative finite number".into(),
+            "Measured serum osmolality must be between 0 and 500 mOsm/kg".into(),
         ));
     }
 
@@ -106,7 +106,7 @@ pub fn build_response(input: &SerumOsmolalityInput) -> Result<CalculationRespons
             o.calculated_osmolality, gap, NORMAL_OSMOLAR_GAP_UPPER_LIMIT
         ),
         _ => format!(
-            "Calculated osmolality {:.1} mOsm/kg. Supply measured_osmolality_mosm_kg to also compute the osmolar gap.",
+            "Calculated osmolality {:.1} mOsm/kg. Enter the measured serum osmolality to calculate the osmolar gap.",
             o.calculated_osmolality
         ),
     };

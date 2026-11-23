@@ -51,9 +51,15 @@ pub struct CorrectedCalciumOutcome {
 }
 
 pub fn compute(input: &CorrectedCalciumInput) -> Result<CorrectedCalciumOutcome, CalcError> {
-    if !input.calcium.is_finite() || input.calcium <= 0.0 {
+    // Broad entry safeguards, not a reference interval or Payne model limits.
+    let max = match input.calcium_unit {
+        CalciumUnit::MmolL => 6.0,
+        CalciumUnit::MgDl => 24.0,
+    };
+    if !(input.calcium > 0.0 && input.calcium <= max) {
         return Err(CalcError::InvalidInput(
-            "calcium must be a positive finite number".into(),
+            "Check total calcium and its unit: expected above 0 and at most 6 mmol/L or 24 mg/dL"
+                .into(),
         ));
     }
     if !input.albumin.is_finite() || input.albumin <= 0.0 {
@@ -146,6 +152,12 @@ impl Calculator for CorrectedCalcium {
             "type": "object",
             "additionalProperties": false,
             "required": ["calcium", "calcium_unit", "albumin", "albumin_unit"],
+            "allOf": [
+                { "if": { "properties": { "calcium_unit": { "const": "mmol/L" } } }, "then": { "properties": { "calcium": { "maximum": 6 } } } },
+                { "if": { "properties": { "calcium_unit": { "const": "mg/dL" } } }, "then": { "properties": { "calcium": { "maximum": 24 } } } },
+                { "if": { "properties": { "albumin_unit": { "const": "g/L" } } }, "then": { "properties": { "albumin": { "minimum": 10, "maximum": 70 } } } },
+                { "if": { "properties": { "albumin_unit": { "const": "g/dL" } } }, "then": { "properties": { "albumin": { "minimum": 1, "maximum": 7 } } } }
+            ],
             "properties": {
                 "calcium": { "type": "number", "exclusiveMinimum": 0, "description": "Measured total calcium" },
                 "calcium_unit": { "type": "string", "enum": ["mmol/L", "mg/dL"] },
@@ -187,6 +199,15 @@ mod tests {
         })
         .unwrap();
         assert_eq!((out.corrected_calcium * 10.0).round() / 10.0, 8.8);
+    }
+
+    #[test]
+    fn rejects_typical_mg_dl_value_labelled_mmol_l() {
+        let mut i =
+            json!({"calcium": 9.5, "calcium_unit": "mmol/L", "albumin": 30, "albumin_unit": "g/L"});
+        assert!(CorrectedCalcium.calculate(&i).is_err());
+        i["calcium_unit"] = json!("mg/dL");
+        assert!(CorrectedCalcium.calculate(&i).is_ok());
     }
 
     #[test]

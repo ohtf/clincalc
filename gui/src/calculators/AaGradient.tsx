@@ -7,15 +7,19 @@ import { IconWind } from "@tabler/icons-react";
 
 import {
   CalculatorPage,
+  BLOOD_GAS_UNITS,
+  ChoiceField,
   Facts,
   inRange,
   NumberField,
   ScoreTile,
   compact,
   fmt,
+  pressureInUnit,
   summaryText,
   useCalculation,
   type CalculatorModule,
+  type BloodGasUnit,
 } from "../kit";
 
 /** Alveolar-arterial oxygen gradient (alveolar gas equation; age adjustment per Mellemgaard 1966). */
@@ -29,16 +33,23 @@ function AaGradientCalculator() {
   const [fio2, setFio2] = useState<number | null>(null);
   const [paco2, setPaco2] = useState<number | null>(null);
   const [pao2, setPao2] = useState<number | null>(null);
+  const [unit, setUnit] = useState<BloodGasUnit | null>(null);
   const [age, setAge] = useState<number | null>(null);
 
   const complete =
     inRange(fio2, FIO2.min, FIO2.max) &&
-    inRange(paco2, PACO2.min, PACO2.max) &&
-    inRange(pao2, PAO2.min, PAO2.max) &&
+    unit !== null &&
+    inRange(paco2, pressureInUnit(PACO2.min, unit), pressureInUnit(PACO2.max, unit)) &&
+    inRange(pao2, pressureInUnit(PAO2.min, unit), pressureInUnit(PAO2.max, unit)) &&
     (age === null || (inRange(age, AGE.min, AGE.max) && Number.isInteger(age)));
   const calc = useCalculation(
     "aa_gradient",
-    complete ? compact({ fio2, paco2_mm_hg: paco2, pao2_mm_hg: pao2, age_years: age }) : null,
+    complete ? compact({
+      fio2,
+      [unit === "kPa" ? "paco2_kpa" : "paco2_mm_hg"]: paco2,
+      [unit === "kPa" ? "pao2_kpa" : "pao2_mm_hg"]: pao2,
+      age_years: age,
+    }) : null,
   );
 
   return (
@@ -51,10 +62,11 @@ function AaGradientCalculator() {
         setFio2(null);
         setPaco2(null);
         setPao2(null);
+        setUnit(null);
         setAge(null);
       }}
       calc={calc}
-      incomplete="Enter FiO2, PaCO2, and PaO2 from the same arterial blood gas."
+      incomplete="Enter FiO2, PaCO2 and PaO2 from the same arterial blood gas, and select the pressure unit."
       form={
         <SimpleGrid cols={2} spacing="md">
           <NumberField
@@ -79,22 +91,26 @@ function AaGradientCalculator() {
           />
           <NumberField
             label="PaCO2"
-            hint="Arterial, in mmHg (1 kPa = 7.5 mmHg)."
-            unit="mmHg"
+            hint="Arterial, from the same blood gas."
+            unit={unit ?? undefined}
             value={paco2}
             onChange={setPaco2}
-            min={PACO2.min}
-            max={PACO2.max}
+            min={unit ? pressureInUnit(PACO2.min, unit) : undefined}
+            max={unit ? pressureInUnit(PACO2.max, unit) : undefined}
           />
           <NumberField
             label="PaO2"
-            hint="Arterial, same blood gas, in mmHg."
-            unit="mmHg"
+            hint="Arterial, from the same blood gas."
+            unit={unit ?? undefined}
             value={pao2}
             onChange={setPao2}
-            min={PAO2.min}
-            max={PAO2.max}
+            min={unit ? pressureInUnit(PAO2.min, unit) : undefined}
+            max={unit ? pressureInUnit(PAO2.max, unit) : undefined}
           />
+          <ChoiceField label="Blood gas pressure unit" value={unit} onChange={(value) => {
+            if (unit !== null) { setPaco2(null); setPao2(null); }
+            setUnit(value);
+          }} options={BLOOD_GAS_UNITS} layout="inline" />
         </SimpleGrid>
       }
       result={(r) => <ScoreTile value={fmt(r.result)} unit="mmHg" badge="A-a gradient" />}
@@ -119,8 +135,8 @@ function AaGradientCalculator() {
           findingsTitle: "Arterial blood gas",
           findings: [
             `FiO2 ${fio2}`,
-            `PaCO2 ${paco2} mmHg`,
-            `PaO2 ${pao2} mmHg`,
+            `PaCO2 ${paco2} ${unit}`,
+            `PaO2 ${pao2} ${unit}`,
             `Alveolar PAO2 ${fmt(r.working.alveolar_pao2_mm_hg)} mmHg (calculated)`,
             age !== null && `Age ${age} years`,
           ],

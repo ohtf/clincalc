@@ -95,6 +95,7 @@ pub fn build_response(input: &Hba1cEagInput) -> Result<CalculationResponse, Calc
     working.insert("hba1c_percent".into(), json!(round1(o.hba1c_percent)));
     working.insert("hba1c_mmol_mol".into(), json!(round1(o.hba1c_mmol_mol)));
     working.insert("eag_mg_dl".into(), json!(round1(o.eag_mg_dl)));
+    working.insert("eag_mmol_l".into(), json!(round1(o.eag_mmol_l)));
 
     let interpretation = format!(
         "HbA1c {:.1}% ({:.0} mmol/mol) corresponds to an estimated average glucose of {:.1} mmol/L ({:.0} mg/dL) over the preceding ~2-3 months. eAG is a population-derived average from the ADAG study; it does not capture glycaemic variability and individual correlation can vary, particularly with conditions affecting red-cell turnover (e.g. haemoglobinopathies, haemolysis, recent transfusion).",
@@ -135,6 +136,10 @@ impl Calculator for Hba1cEag {
         json!({
             "$schema": "https://json-schema.org/draft/2020-12/schema", "title": "Hba1cEagInput", "type": "object", "additionalProperties": false,
             "required": ["hba1c", "hba1c_unit"],
+            "allOf": [
+                { "if": { "properties": { "hba1c_unit": { "const": "%" } } }, "then": { "properties": { "hba1c": { "minimum": 3.5, "maximum": 20 } } } },
+                { "if": { "properties": { "hba1c_unit": { "const": "mmol/mol" } } }, "then": { "properties": { "hba1c": { "minimum": 15, "maximum": 195 } } } }
+            ],
             "properties": {
                 "hba1c": { "type": "number", "description": "HbA1c value, in the unit given by hba1c_unit" },
                 "hba1c_unit": { "type": "string", "enum": ["%", "mmol/mol"], "description": "% is NGSP/DCCT (US); mmol/mol is IFCC (UK/international)" }

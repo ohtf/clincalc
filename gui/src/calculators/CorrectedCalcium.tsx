@@ -39,6 +39,7 @@ const ALBUMIN: Record<AlbuminUnit, { min: number; max: number }> = {
   "g/L": { min: 10, max: 70 },
   "g/dL": { min: 1, max: 7 },
 };
+const CALCIUM_MAX: Record<CalciumUnit, number> = { "mmol/L": 6, "mg/dL": 24 };
 
 const fixed2 = (v: unknown) => asNumber(v)?.toFixed(2) ?? asText(v);
 
@@ -51,7 +52,7 @@ function CorrectedCalciumCalculator() {
   const complete =
     calciumUnit !== null &&
     albuminUnit !== null &&
-    inRange(calcium, 0) &&
+    inRange(calcium, 0, CALCIUM_MAX[calciumUnit]) &&
     calcium > 0 &&
     inRange(albumin, ALBUMIN[albuminUnit].min, ALBUMIN[albuminUnit].max);
   const calc = useCalculation(
@@ -93,6 +94,7 @@ function CorrectedCalciumCalculator() {
             value={calcium}
             onChange={setCalcium}
             min={calciumUnit ? 0 : undefined}
+            max={calciumUnit ? CALCIUM_MAX[calciumUnit] : undefined}
           />
           <ChoiceField layout="inline"
             label="Albumin unit"

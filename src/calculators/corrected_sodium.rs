@@ -173,7 +173,7 @@ impl Calculator for CorrectedSodium {
             "required": ["sodium", "glucose", "glucose_unit", "method"],
             "properties": {
                 "sodium": { "type": "number", "minimum": 80, "maximum": 200, "description": "Measured serum sodium, mmol/L" },
-                "glucose": { "type": "number", "description": "Serum glucose: 100-2500 mg/dL or 5.55-138.76 mmol/L; this correction is not valid below normoglycaemia" },
+                "glucose": { "type": "number", "description": "Serum glucose: 100–2500 mg/dL, or the exact equivalent in mmol/L (divide by 18.016). At two decimal places the accepted mmol/L range is 5.56–138.76." },
                 "glucose_unit": { "type": "string", "enum": ["mmol/L", "mg/dL"] },
                 "method": { "type": "string", "enum": ["katz", "hillier"], "description": "Correction factor: Katz (1.6, 1973) or Hillier (2.4, 1999)" }
             },
@@ -184,7 +184,7 @@ impl Calculator for CorrectedSodium {
                 },
                 {
                     "if": { "properties": { "glucose_unit": { "const": "mmol/L" } }, "required": ["glucose_unit"] },
-                    "then": { "properties": { "glucose": { "minimum": 5.550621669626999, "maximum": 138.76554174067496 } } }
+                    "then": { "properties": { "glucose": { "minimum": NORMAL_GLUCOSE_MGDL / MGDL_PER_MMOL_GLUCOSE, "maximum": 2500.0 / MGDL_PER_MMOL_GLUCOSE } } }
                 }
             ]
         })

@@ -18,6 +18,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
+pub use super::fractional_excretion::{CreatinineUnit, UreaUnit};
+use super::fractional_excretion::{align_pair, unit_schema};
 use crate::calculator::{CalcError, Calculator};
 use crate::license::CalculatorLicense;
 use crate::response::CalculationResponse;
@@ -42,11 +44,20 @@ pub struct FeureaInput {
     pub urine_creatinine: f64,
     /// Plasma creatinine (any unit, same as urine_creatinine)
     pub plasma_creatinine: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub urine_creatinine_unit: Option<CreatinineUnit>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plasma_creatinine_unit: Option<CreatinineUnit>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub urine_urea_unit: Option<UreaUnit>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plasma_urea_unit: Option<UreaUnit>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FeureaOutcome {
     pub feurea_percent: f64,
+    pub category: &'static str,
     pub interpretation: String,
 }
 
@@ -64,24 +75,53 @@ pub fn compute(input: &FeureaInput) -> Result<FeureaOutcome, CalcError> {
         }
     }
 
-    let feurea = (input.urine_urea * input.plasma_creatinine)
-        / (input.plasma_urea * input.urine_creatinine)
-        * 100.0;
+    let (urine_cr, plasma_cr) = align_pair(
+        input.urine_creatinine,
+        input.plasma_creatinine,
+        input.urine_creatinine_unit.map(CreatinineUnit::factor),
+        input.plasma_creatinine_unit.map(CreatinineUnit::factor),
+        "creatinine",
+    )?;
+    let (urine_urea, plasma_urea) = align_pair(
+        input.urine_urea,
+        input.plasma_urea,
+        input.urine_urea_unit.map(UreaUnit::factor),
+        input.plasma_urea_unit.map(UreaUnit::factor),
+        "urea",
+    )?;
+    let feurea = (urine_urea * plasma_cr) / (plasma_urea * urine_cr) * 100.0;
+    if !feurea.is_finite() || feurea == 0.0 {
+        return Err(CalcError::InvalidInput(
+            "FEUrea is outside the calculable range; check the measurements and units".into(),
+        ));
+    }
 
-    let category = if feurea < 35.0 {
-        "pre-renal aetiology"
+    let (category, meaning) = if feurea > 100.0 {
+        (
+            "check_inputs",
+            "above 100%; check the units and that samples are paired. No clinical classification is given",
+        )
+    } else if feurea < 35.0 {
+        ("pre_renal", "consistent with pre-renal aetiology")
     } else if feurea < 50.0 {
-        "indeterminate - clinical context and trend are required"
+        (
+            "indeterminate",
+            "indeterminate; clinical context and trend are required",
+        )
     } else {
-        "intrinsic renal failure (e.g. acute tubular necrosis)"
+        (
+            "intrinsic",
+            "consistent with intrinsic renal failure (e.g. acute tubular necrosis)",
+        )
     };
 
     let interpretation = format!(
-        "FEUrea {feurea:.1}% - consistent with {category}. FEUrea is less affected by loop and thiazide diuretics than FENa, so it is preferred in diuretic-treated patients; it can still be affected by severe volume depletion and some drugs."
+        "FEUrea {feurea:.1}% - {meaning}. FEUrea is less affected by loop and thiazide diuretics than FENa; it can still be affected by severe volume depletion and some drugs."
     );
 
     Ok(FeureaOutcome {
         feurea_percent: feurea,
+        category,
         interpretation,
     })
 }
@@ -89,6 +129,7 @@ pub fn compute(input: &FeureaInput) -> Result<FeureaOutcome, CalcError> {
 pub fn build_response(input: &FeureaInput) -> Result<CalculationResponse, CalcError> {
     let o = compute(input)?;
     let mut working = Map::new();
+    working.insert("category".into(), json!(o.category));
     working.insert(
         "feurea_percent".into(),
         json!(format!("{:.1}", o.feurea_percent)),
@@ -128,7 +169,17 @@ impl Calculator for Feurea {
             "type": "object",
             "additionalProperties": false,
             "required": ["urine_urea", "plasma_urea", "urine_creatinine", "plasma_creatinine"],
+            "dependentRequired": {
+                "urine_creatinine_unit": ["plasma_creatinine_unit"],
+                "plasma_creatinine_unit": ["urine_creatinine_unit"],
+                "urine_urea_unit": ["plasma_urea_unit"],
+                "plasma_urea_unit": ["urine_urea_unit"]
+            },
             "properties": {
+                "urine_creatinine_unit": unit_schema(&CreatinineUnit::FACTORS, "Unit as reported for urine creatinine. Omit both creatinine units only for a matched-unit pair."),
+                "plasma_creatinine_unit": unit_schema(&CreatinineUnit::FACTORS, "Unit as reported for plasma creatinine. Omit both creatinine units only for a matched-unit pair."),
+                "urine_urea_unit": unit_schema(&UreaUnit::FACTORS, "Unit as reported for urine urea or urine urea nitrogen. Omit both urea units only for a matched-unit pair."),
+                "plasma_urea_unit": unit_schema(&UreaUnit::FACTORS, "Unit as reported for plasma urea or blood urea nitrogen. Omit both urea units only for a matched-unit pair."),
                 "urine_urea": { "type": "number", "exclusiveMinimum": 0, "description": "Urine urea (any unit, must match plasma_urea unit)" },
                 "plasma_urea": { "type": "number", "exclusiveMinimum": 0, "description": "Plasma/serum urea (same unit as urine_urea)" },
                 "urine_creatinine": { "type": "number", "exclusiveMinimum": 0, "description": "Urine creatinine (any unit, must match plasma_creatinine unit)" },
@@ -153,7 +204,23 @@ mod tests {
             plasma_urea: p_urea,
             urine_creatinine: u_cr,
             plasma_creatinine: p_cr,
+            urine_creatinine_unit: None,
+            plasma_creatinine_unit: None,
+            urine_urea_unit: None,
+            plasma_urea_unit: None,
         }
+    }
+
+    #[test]
+    fn converts_creatinine_and_urea_nitrogen_independently() {
+        let mut i = inp(100.0, 28.0, 10.0, 250.0);
+        assert_eq!(compute(&i).unwrap().category, "check_inputs");
+        i.urine_creatinine_unit = Some(CreatinineUnit::MmolL);
+        i.plasma_creatinine_unit = Some(CreatinineUnit::UmolL);
+        i.urine_urea_unit = Some(UreaUnit::MmolL);
+        assert!(compute(&i).is_err());
+        i.plasma_urea_unit = Some(UreaUnit::UreaNitrogenMgDl);
+        assert!((compute(&i).unwrap().feurea_percent - 25.0).abs() < 1e-9);
     }
 
     #[test]
@@ -170,7 +237,7 @@ mod tests {
 
     #[test]
     fn intrinsic_high_feurea() {
-        let o = compute(&inp(400.0, 10.0, 60.0, 2.0)).unwrap();
+        let o = compute(&inp(240.0, 10.0, 60.0, 2.0)).unwrap();
         assert!(o.feurea_percent >= 50.0, "got {}", o.feurea_percent);
         assert!(o.interpretation.contains("intrinsic"));
     }
