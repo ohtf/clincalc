@@ -132,8 +132,8 @@ impl Calculator for CarboplatinCalvert {
             "$schema": "https://json-schema.org/draft/2020-12/schema", "title": "CarboplatinCalvertInput", "type": "object", "additionalProperties": false,
             "required": ["target_auc_mg_ml_min", "gfr_ml_min"],
             "properties": {
-                "target_auc_mg_ml_min": { "type": "number", "minimum": 1, "maximum": 12, "description": "Target AUC in mg/mL x min, per the chosen regimen/protocol" },
-                "gfr_ml_min": { "type": "number", "minimum": 5, "maximum": 250, "description": "Measured or estimated GFR, mL/min; capped at 125 mL/min for dosing purposes" }
+                "target_auc_mg_ml_min": { "type": "number", "minimum": 1, "maximum": 12, "unit": "mg/mL·min", "description": "Target AUC in mg/mL x min, per the chosen regimen/protocol" },
+                "gfr_ml_min": { "type": "number", "minimum": 5, "maximum": 250, "unit": "mL/min", "description": "Measured or estimated GFR, mL/min; capped at 125 mL/min for dosing purposes" }
             }
         })
     }

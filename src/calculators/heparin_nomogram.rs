@@ -179,6 +179,43 @@ fn action_text(action: AdjustmentAction) -> String {
 pub fn build_response(input: &HeparinNomogramInput) -> Result<CalculationResponse, CalcError> {
     let o = compute(input)?;
     let mut working = Map::new();
+    if o.adjustment.is_none() {
+        working.insert(
+            "initial_bolus_units".into(),
+            json!(round0(o.initial_bolus_units)),
+        );
+    }
+    if let Some(action) = o.adjustment {
+        let fields = match action {
+            AdjustmentAction::ReboluAndIncrease {
+                bolus_units_kg,
+                increase_units_kg_hr,
+            } => json!({
+                "kind": "rebolus_and_increase", "bolus_units_per_kg": bolus_units_kg,
+                "bolus_units": round0(bolus_units_kg * input.weight_kg), "infusion_change_units_per_kg_hr": increase_units_kg_hr,
+            }),
+            AdjustmentAction::IncreaseOnly {
+                increase_units_kg_hr,
+            } => json!({
+                "kind": "increase", "infusion_change_units_per_kg_hr": increase_units_kg_hr,
+            }),
+            AdjustmentAction::NoChange => {
+                json!({ "kind": "no_change", "infusion_change_units_per_kg_hr": 0 })
+            }
+            AdjustmentAction::DecreaseOnly {
+                decrease_units_kg_hr,
+            } => json!({
+                "kind": "decrease", "infusion_change_units_per_kg_hr": -decrease_units_kg_hr,
+            }),
+            AdjustmentAction::HoldThenDecrease {
+                hold_minutes,
+                decrease_units_kg_hr,
+            } => json!({
+                "kind": "hold_then_decrease", "hold_minutes": hold_minutes, "infusion_change_units_per_kg_hr": -decrease_units_kg_hr,
+            }),
+        };
+        working.insert("adjustment".into(), fields);
+    }
     working.insert(
         "initial_infusion_rate_units_hr".into(),
         json!(round0(o.initial_infusion_rate_units_hr)),
@@ -193,8 +230,8 @@ pub fn build_response(input: &HeparinNomogramInput) -> Result<CalculationRespons
     let interpretation = match o.adjustment {
         None => format!(
             "Initial dose: bolus {:.0} units, then infuse at {:.0} units/hr ({} units/kg/hr). Check the first aPTT 6 hours after starting and apply the nomogram adjustment from that result. This is a calculation aid reflecting the Raschke nomogram; verify target range and adjustment steps against local protocol.",
-            o.initial_bolus_units,
-            o.initial_infusion_rate_units_hr,
+            round0(o.initial_bolus_units),
+            round0(o.initial_infusion_rate_units_hr),
             INITIAL_INFUSION_UNITS_PER_KG_PER_HR
         ),
         Some(action) => format!(

@@ -110,8 +110,15 @@ impl Calculator for Basdai {
         LICENSE
     }
     fn input_schema(&self) -> Value {
-        let q = |desc: &str| json!({ "type": "number", "minimum": 0, "maximum": 10, "description": desc });
-        json!({ "$schema": "https://json-schema.org/draft/2020-12/schema", "title": "BasdaiInput", "type": "object", "additionalProperties": false, "required": ["fatigue", "spinal_pain", "peripheral_joint_pain_swelling", "enthesitis", "morning_stiffness_severity", "morning_stiffness_duration"], "properties": { "fatigue": q("Fatigue/tiredness 0-10"), "spinal_pain": q("Neck/back/hip pain 0-10"), "peripheral_joint_pain_swelling": q("Peripheral joint pain/swelling 0-10"), "enthesitis": q("Areas tender to touch/pressure 0-10"), "morning_stiffness_severity": q("Morning stiffness severity 0-10"), "morning_stiffness_duration": q("Morning stiffness duration 0-10") } })
+        let severity = |desc: &str| json!({ "type": "number", "minimum": 0, "maximum": 10, "description": format!("{desc} over the past week, scored 0 (none) to 10 (very severe)") });
+        json!({ "$schema": "https://json-schema.org/draft/2020-12/schema", "title": "BasdaiInput", "type": "object", "additionalProperties": false, "required": ["fatigue", "spinal_pain", "peripheral_joint_pain_swelling", "enthesitis", "morning_stiffness_severity", "morning_stiffness_duration"], "properties": {
+            "fatigue": severity("Fatigue or tiredness"),
+            "spinal_pain": severity("Neck, back or hip pain"),
+            "peripheral_joint_pain_swelling": severity("Pain or swelling in joints other than the neck, back and hips"),
+            "enthesitis": severity("Discomfort from areas tender to touch or pressure"),
+            "morning_stiffness_severity": severity("Severity of morning stiffness on waking"),
+            "morning_stiffness_duration": { "type": "number", "minimum": 0, "maximum": 10, "description": "Duration of stiffness after waking over the past week, scored 0 (none) to 10 (two hours or more); enter score, not minutes" }
+        } })
     }
     fn calculate(&self, input: &Value) -> Result<CalculationResponse, CalcError> {
         let parsed: BasdaiInput = serde_json::from_value(input.clone())

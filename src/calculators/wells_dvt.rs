@@ -7,12 +7,9 @@
 //! ("alternative diagnosis at least as likely as DVT"), which scores -2. The
 //! total runs from -2 to 9.
 //!
-//! Two interpretations are encoded:
-//! - The two-level stratification used by NICE NG158 (DVT *likely* at a score
-//!   of 2 or more; *unlikely* at 1 or less), which drives the choice between a
-//!   proximal leg vein ultrasound and a D-dimer test.
-//! - The older three-level stratification from the original derivation (low
-//!   <=0, moderate 1-2, high >=3), surfaced as a caveat for context.
+//! The interpretation uses NICE NG158's two-level stratification (DVT *likely*
+//! at a score of 2 or more; *unlikely* at 1 or less). It does not apply the
+//! older three-level stratification.
 //!
 //! Several criteria carry input definitions because their TRUE/FALSE conditions
 //! are easy to get subtly wrong: "active cancer" has a time window, the calf

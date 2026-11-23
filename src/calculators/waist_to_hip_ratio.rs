@@ -95,9 +95,10 @@ pub fn compute(input: &WaistToHipRatioInput) -> Result<WaistToHipRatioOutcome, C
     } else {
         format!("below the commonly WHO-attributed cut-off of {cutoff:.2}")
     };
+    let display = display_ratio(ratio, cutoff);
 
     let interpretation = format!(
-        "Waist-to-hip ratio {ratio} ({sex_label} adult; {boundary_note}). The 2011 WHO report does not establish a universal cut-off and notes that risk relationships and optimal cut-offs can vary between populations. WHR is one input into cardiometabolic risk assessment, not a diagnosis on its own."
+        "Waist-to-hip ratio {display} ({sex_label} adult; {boundary_note}). The 2011 WHO report does not establish a universal cut-off and notes that risk relationships and optimal cut-offs can vary between populations. WHR is one input into cardiometabolic risk assessment, not a diagnosis on its own."
     );
 
     Ok(WaistToHipRatioOutcome {
@@ -106,6 +107,15 @@ pub fn compute(input: &WaistToHipRatioInput) -> Result<WaistToHipRatioOutcome, C
         at_or_above_who_attributed_cutoff,
         interpretation,
     })
+}
+
+fn display_ratio(ratio: f64, cutoff: f64) -> String {
+    let display = format!("{ratio:.3}");
+    if ratio < cutoff && display.parse::<f64>().is_ok_and(|v| v >= cutoff) {
+        ratio.to_string()
+    } else {
+        display
+    }
 }
 
 pub fn build_response(input: &WaistToHipRatioInput) -> Result<CalculationResponse, CalcError> {
@@ -125,6 +135,10 @@ pub fn build_response(input: &WaistToHipRatioInput) -> Result<CalculationRespons
         json!(o.at_or_above_who_attributed_cutoff),
     );
     working.insert("ratio".into(), json!(o.ratio));
+    working.insert(
+        "ratio_display".into(),
+        json!(display_ratio(o.ratio, o.who_attributed_cutoff)),
+    );
 
     Ok(CalculationResponse {
         calculator: NAME.to_string(),

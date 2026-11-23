@@ -31,6 +31,7 @@ pub struct AnionGapInput {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AnionGapOutcome {
+    pub band: &'static str,
     pub anion_gap: f64,
     pub albumin_corrected_anion_gap: Option<f64>,
     pub interpretation: String,
@@ -71,6 +72,7 @@ pub fn compute(input: &AnionGapInput) -> Result<AnionGapOutcome, CalcError> {
         )
     };
     Ok(AnionGapOutcome {
+        band,
         anion_gap,
         albumin_corrected_anion_gap: corrected,
         interpretation,
@@ -89,6 +91,7 @@ fn validate(value: f64, name: &str, min: f64, max: f64) -> Result<(), CalcError>
 pub fn build_response(input: &AnionGapInput) -> Result<CalculationResponse, CalcError> {
     let o = compute(input)?;
     let mut working = Map::new();
+    working.insert("band".into(), json!(o.band));
     working.insert("anion_gap_mmol_l".into(), json!(round1(o.anion_gap)));
     working.insert(
         "includes_potassium".into(),

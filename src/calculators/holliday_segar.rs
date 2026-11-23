@@ -61,6 +61,7 @@ pub fn build_response(input: &HollidaySegarInput) -> Result<CalculationResponse,
     let o = compute(input)?;
     let mut working = Map::new();
     working.insert("hourly_ml".into(), json!(round1(o.hourly_ml)));
+    working.insert("daily_ml".into(), json!(round1(o.daily_ml)));
     working.insert("unit".into(), json!("mL"));
 
     let interpretation = format!(

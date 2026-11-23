@@ -127,13 +127,13 @@ pub fn compute(input: &MaxHeartRateInput) -> Result<MaxHeartRateOutcome, CalcErr
     }
 
     let rhr_note = if let Some(rhr) = input.resting_hr {
-        format!("; Karvonen zones based on resting HR {rhr} bpm")
+        format!("Karvonen heart-rate reserve zones use a resting heart rate of {rhr} bpm")
     } else {
-        "; supply resting_hr for Karvonen (heart-rate reserve) zones".to_string()
+        "Zones use percentages of estimated maximum heart rate. Enter resting heart rate for Karvonen heart-rate reserve zones".to_string()
     };
 
     let interpretation = format!(
-        "Estimated maximum heart rate {hrmax} bpm by Tanaka 208 - 0.7 x age ({method}){rhr_note}. \
+        "Estimated maximum heart rate {hrmax} bpm by Tanaka (208 - 0.7 x age). {rhr_note}. \
 Zones are rounded estimates for healthy adults; individual testing (e.g. graded exercise test) is more accurate for athletes or patients with cardiovascular disease."
     );
 

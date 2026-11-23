@@ -87,6 +87,7 @@ pub fn build_response(input: &IdealBodyWeightInput) -> Result<CalculationRespons
     let o = compute(input)?;
     let mut working = Map::new();
     working.insert("unit".into(), json!("kg"));
+    working.insert("ideal_body_weight_kg".into(), json!(round1(o.ibw_kg)));
     if let Some(adj) = o.adjusted_body_weight_kg {
         working.insert("adjusted_body_weight_kg".into(), json!(round1(adj)));
     }

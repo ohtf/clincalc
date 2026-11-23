@@ -190,13 +190,22 @@ pub struct BradenOutcome {
     pub interpretation: String,
 }
 
+fn components(input: &BradenInput) -> [(&'static str, u8); 6] {
+    [
+        (
+            "sensory_perception",
+            sensory_score(input.sensory_perception),
+        ),
+        ("moisture", moisture_score(input.moisture)),
+        ("activity", activity_score(input.activity)),
+        ("mobility", mobility_score(input.mobility)),
+        ("nutrition", nutrition_score(input.nutrition)),
+        ("friction_shear", friction_score(input.friction_shear)),
+    ]
+}
+
 pub fn compute(input: &BradenInput) -> Result<BradenOutcome, CalcError> {
-    let score = sensory_score(input.sensory_perception)
-        + moisture_score(input.moisture)
-        + activity_score(input.activity)
-        + mobility_score(input.mobility)
-        + nutrition_score(input.nutrition)
-        + friction_score(input.friction_shear);
+    let score = components(input).iter().map(|(_, points)| points).sum();
 
     let risk_level = match score {
         6..=9 => "Very high risk",
@@ -238,6 +247,14 @@ pub fn build_response(input: &BradenInput) -> Result<CalculationResponse, CalcEr
     let mut working = Map::new();
     working.insert("braden_score".into(), json!(o.score));
     working.insert("risk_level".into(), json!(o.risk_level));
+    working.insert(
+        "component_points".into(),
+        json!(
+            components(input)
+                .into_iter()
+                .collect::<std::collections::BTreeMap<_, _>>()
+        ),
+    );
 
     Ok(CalculationResponse {
         calculator: NAME.to_string(),

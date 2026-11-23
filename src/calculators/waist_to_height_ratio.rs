@@ -37,6 +37,7 @@ pub struct WaistToHeightRatioInput {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct WaistToHeightRatioOutcome {
+    pub category: &'static str,
     pub ratio: f64,
     pub interpretation: String,
 }
@@ -80,6 +81,7 @@ pub fn compute(input: &WaistToHeightRatioInput) -> Result<WaistToHeightRatioOutc
     );
 
     Ok(WaistToHeightRatioOutcome {
+        category,
         ratio,
         interpretation,
     })
@@ -89,6 +91,7 @@ pub fn build_response(input: &WaistToHeightRatioInput) -> Result<CalculationResp
     let o = compute(input)?;
 
     let mut working = Map::new();
+    working.insert("category".into(), json!(o.category));
     working.insert("ratio".into(), json!(round2(o.ratio)));
 
     Ok(CalculationResponse {

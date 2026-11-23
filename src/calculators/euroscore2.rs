@@ -359,18 +359,8 @@ pub fn compute(input: &EuroScore2Input) -> Result<EuroScore2Outcome, CalcError> 
     let mortality = y.exp() / (1.0 + y.exp());
     let mortality_percent = mortality * 100.0;
 
-    let band = if mortality_percent < 2.0 {
-        "low"
-    } else if mortality_percent < 5.0 {
-        "intermediate"
-    } else if mortality_percent < 10.0 {
-        "high"
-    } else {
-        "very high"
-    };
-
     let interpretation = format!(
-        "Predicted operative (in-hospital) mortality {mortality_percent:.2}% ({band} risk). \
+        "Predicted operative (in-hospital) mortality {mortality_percent:.2}%. \
 EuroSCORE II estimates the risk of death after cardiac surgery from preoperative factors; it is \
 a population model for risk-adjustment and patient counselling, not a guarantee for an individual."
     );

@@ -32,7 +32,7 @@
 //! burns of equal fraction report the same %TBSA.
 //!
 //! The result is designed to feed directly into [`crate::calculators::parkland`]'s
-//! `tbsa_percent` input.
+//! `burn_tbsa_percent` input.
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
@@ -382,29 +382,26 @@ pub fn compute(input: &LundBrowderInput) -> Result<LundBrowderOutcome, CalcError
 
 pub fn build_response(input: &LundBrowderInput) -> Result<CalculationResponse, CalcError> {
     let o = compute(input)?;
+    let total = round1(o.total_tbsa_percent);
     let mut working = Map::new();
     working.insert("age_band".into(), json!(o.age_band.slug()));
-    working.insert(
-        "total_tbsa_percent".into(),
-        json!(round1(o.total_tbsa_percent)),
-    );
+    working.insert("total_tbsa_percent".into(), json!(total));
     for (name, value) in o.contributions {
         working.insert(format!("{name}_contribution_percent"), json!(round1(value)));
     }
 
     let interpretation = format!(
         "Estimated {total:.1}% TBSA burned (Lund-Browder chart, {band} age band). Feeds directly into the \
-Parkland formula's tbsa_percent input for first-24-hour fluid-resuscitation volume. Each region is scored \
+Parkland formula's burn_tbsa_percent input for first-24-hour fluid-resuscitation volume. Each region is scored \
 as the fraction of that region's own allotted %TBSA actually burned (0.0 none to 1.0 the whole region); \
 within one region the chart cannot distinguish a circumferential burn from a localised one of the same \
 area, so clinical judgement remains essential alongside this estimate.",
-        total = o.total_tbsa_percent,
         band = o.age_band.description()
     );
 
     Ok(CalculationResponse {
         calculator: NAME.to_string(),
-        result: json!(round1(o.total_tbsa_percent)),
+        result: json!(total),
         interpretation,
         working,
         reference: REFERENCE.to_string(),

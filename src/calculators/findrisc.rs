@@ -78,6 +78,7 @@ pub struct FindriscInput {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FindriscOutcome {
     pub score: u8,
+    pub component_points: [(&'static str, u8); 8],
     pub risk_band: &'static str,
     pub ten_year_risk: &'static str,
     pub interpretation: String,
@@ -148,14 +149,17 @@ pub fn compute(input: &FindriscInput) -> Result<FindriscOutcome, CalcError> {
         FamilyHistory::FirstDegree => 5,
     };
 
-    let score = age_pts
-        + bmi_pts
-        + waist_pts
-        + activity_pts
-        + diet_pts
-        + antihyp_pts
-        + glucose_pts
-        + family_pts;
+    let component_points = [
+        ("age", age_pts),
+        ("bmi", bmi_pts),
+        ("waist_cm", waist_pts),
+        ("physically_active", activity_pts),
+        ("daily_vegetables_fruit", diet_pts),
+        ("antihypertensive_medication", antihyp_pts),
+        ("high_blood_glucose_history", glucose_pts),
+        ("family_history", family_pts),
+    ];
+    let score = component_points.iter().map(|(_, points)| points).sum();
 
     let (risk_band, ten_year_risk) = match score {
         0..=7 => ("Low", "approximately 1 in 100"),
@@ -173,6 +177,7 @@ physical activity, dietary change) can substantially reduce risk in moderate and
 
     Ok(FindriscOutcome {
         score,
+        component_points,
         risk_band,
         ten_year_risk,
         interpretation,
@@ -184,6 +189,14 @@ pub fn build_response(input: &FindriscInput) -> Result<CalculationResponse, Calc
 
     let mut working = Map::new();
     working.insert("findrisc_score".into(), json!(o.score));
+    working.insert(
+        "component_points".into(),
+        json!(
+            o.component_points
+                .into_iter()
+                .collect::<std::collections::BTreeMap<_, _>>()
+        ),
+    );
     working.insert("risk_band".into(), json!(o.risk_band));
     working.insert("ten_year_risk".into(), json!(o.ten_year_risk));
 

@@ -233,10 +233,10 @@ pub fn build_response(input: &PsiPortInput) -> Result<CalculationResponse, CalcE
     }
 
     let disposition = match o.risk_class {
-        RiskClass::I | RiskClass::II => "outpatient management is usually appropriate",
-        RiskClass::III => "brief inpatient observation is often appropriate",
-        RiskClass::IV => "inpatient admission is indicated",
-        RiskClass::V => "inpatient admission is indicated, with assessment for ICU-level care",
+        RiskClass::I | RiskClass::II => "Outpatient management is usually appropriate",
+        RiskClass::III => "Brief inpatient observation is often appropriate",
+        RiskClass::IV => "Inpatient admission is indicated",
+        RiskClass::V => "Inpatient admission is indicated, with assessment for ICU-level care",
     };
 
     let interpretation = match o.points {

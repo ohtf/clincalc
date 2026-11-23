@@ -102,7 +102,11 @@ pub fn build_response(input: &QtcInput) -> Result<CalculationResponse, CalcError
 
     let interpretation = format!(
         "QTc (Bazett) {:.0} ms; Fridericia {:.0} ms, Framingham {:.0} ms, Hodges {:.0} ms.{} Bazett over-corrects at heart rates away from 60 bpm; Fridericia or Framingham are generally preferred at tachycardia or bradycardia. Sex-specific thresholds (prolonged >450 ms men, >460 ms women) apply to Bazett-corrected values.",
-        o.bazett_ms, o.fridericia_ms, o.framingham_ms, o.hodges_ms, risk_note
+        round0(o.bazett_ms),
+        round0(o.fridericia_ms),
+        round0(o.framingham_ms),
+        round0(o.hodges_ms),
+        risk_note
     );
 
     Ok(CalculationResponse {
@@ -156,6 +160,15 @@ impl Calculator for Qtc {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hodges_half_ms_rounds_the_same_in_prose_and_working() {
+        let r = Qtc
+            .calculate(&json!({"qt_ms": 420, "heart_rate_bpm": 90}))
+            .unwrap();
+        assert_eq!(r.working["hodges_ms"], json!(473.0));
+        assert!(r.interpretation.contains("Hodges 473 ms"));
+    }
 
     #[test]
     fn at_hr_60_all_formulas_equal_raw_qt() {

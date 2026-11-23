@@ -179,6 +179,7 @@ pub struct BarthelInput {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BarthelOutcome {
     pub score: u8,
+    pub band: &'static str,
     pub interpretation: String,
 }
 
@@ -209,6 +210,7 @@ pub fn compute(i: &BarthelInput) -> Result<BarthelOutcome, CalcError> {
     );
     Ok(BarthelOutcome {
         score,
+        band,
         interpretation,
     })
 }
@@ -216,6 +218,7 @@ pub fn compute(i: &BarthelInput) -> Result<BarthelOutcome, CalcError> {
 pub fn build_response(i: &BarthelInput) -> Result<CalculationResponse, CalcError> {
     let o = compute(i)?;
     let mut working = Map::new();
+    working.insert("band".into(), json!(o.band));
     working.insert("feeding".into(), json!(i.feeding.points()));
     working.insert("bathing".into(), json!(i.bathing.points()));
     working.insert("grooming".into(), json!(i.grooming.points()));

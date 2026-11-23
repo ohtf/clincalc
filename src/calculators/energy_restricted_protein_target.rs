@@ -247,8 +247,16 @@ pub fn build_response(
 
     let interpretation = format!(
         "{band_label} priority for fat-free mass retention: {bm_range}, or equivalently {ffm_range}. This band reflects two clinician-asserted factors from Refalo et al.'s practical-application scheme: perceived risk of FFM loss ({perceived_risk}) and the personal or sporting importance of retaining FFM ({importance}). Both present gives the High band (a bounded range); exactly one gives Moderate (a floor only, no stated ceiling); neither gives Low (a ceiling only, no stated floor). This applies only to energy-restricted, resistance-trained adults, and is not a general dietary protein recommendation.",
-        perceived_risk = input.perceived_risk_of_ffm_loss,
-        importance = input.importance_of_ffm_retention,
+        perceived_risk = if input.perceived_risk_of_ffm_loss {
+            "elevated"
+        } else {
+            "not elevated"
+        },
+        importance = if input.importance_of_ffm_retention {
+            "important"
+        } else {
+            "not a priority"
+        },
     );
 
     Ok(CalculationResponse {

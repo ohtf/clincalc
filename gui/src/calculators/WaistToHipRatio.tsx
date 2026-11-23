@@ -109,13 +109,13 @@ function WaistToHipRatioCalculator() {
       }
       result={(r) => (
         <ScoreTile
-          value={fixed(r.result, 3)}
+          value={String(r.working.ratio_display ?? fixed(r.result, 3))}
           badge={`${verdict(r)} ${fixed(r.working.who_attributed_cutoff, 2)}`}
         />
       )}
       summary={(r) =>
         summaryText({
-          heading: `Waist-to-hip ratio ${fixed(r.result, 3)} (${verdict(r)} the WHO-attributed ${sex} cut-off of ${fixed(r.working.who_attributed_cutoff, 2)})`,
+          heading: `Waist-to-hip ratio ${String(r.working.ratio_display ?? fixed(r.result, 3))} (${verdict(r)} the WHO-attributed ${sex} cut-off of ${fixed(r.working.who_attributed_cutoff, 2)})`,
           interpretation: r.interpretation,
           findingsTitle: "Measurements",
           findings: [

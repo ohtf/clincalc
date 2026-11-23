@@ -81,6 +81,7 @@ pub fn build_response(input: &OttawaKneeInput) -> Result<CalculationResponse, Ca
     } else {
         "No criterion is present: a knee radiograph series is not indicated by the rule. Validated for patients aged 18 or over with an acute knee injury less than 7 days old who are reliably examinable; not validated for children.".to_string()
     };
+    working.insert("xray_indicated".into(), json!(o.xray_indicated));
 
     Ok(CalculationResponse {
         calculator: NAME.to_string(),

@@ -57,37 +57,6 @@ pub struct BodyFatCircumferenceOutcome {
     pub interpretation: String,
 }
 
-fn classify_body_fat(sex: Sex, bf: f64) -> &'static str {
-    match sex {
-        Sex::Male => {
-            if bf < 6.0 {
-                "essential fat (below healthy minimum)"
-            } else if bf < 14.0 {
-                "athletic"
-            } else if bf < 18.0 {
-                "fitness"
-            } else if bf < 25.0 {
-                "average"
-            } else {
-                "obese range"
-            }
-        }
-        Sex::Female => {
-            if bf < 14.0 {
-                "essential fat (below healthy minimum)"
-            } else if bf < 21.0 {
-                "athletic"
-            } else if bf < 25.0 {
-                "fitness"
-            } else if bf < 32.0 {
-                "average"
-            } else {
-                "obese range"
-            }
-        }
-    }
-}
-
 pub fn compute(
     input: &BodyFatCircumferenceInput,
 ) -> Result<BodyFatCircumferenceOutcome, CalcError> {
@@ -130,15 +99,14 @@ pub fn compute(
         }
     };
 
-    if !bf.is_finite() || bf < 0.0 {
+    if !(0.0..=100.0).contains(&bf) {
         return Err(CalcError::InvalidInput(
             "computed body fat percentage is invalid - check measurement inputs".into(),
         ));
     }
 
-    let category = classify_body_fat(input.sex, bf);
     let interpretation = format!(
-        "Estimated body fat {:.1}% ({category}) by the US Navy circumference method \
+        "Estimated body fat {:.1}% by the US Navy circumference method \
 (Hodgdon & Beckett 1984). This method has a standard error of ~3-4% and should not \
 replace clinical assessment or direct body composition measurement.",
         bf

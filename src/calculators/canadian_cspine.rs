@@ -113,7 +113,7 @@ pub fn build_response(input: &CanadianCspineInput) -> Result<CalculationResponse
         CspineOutcome::NoLowRiskFactor => "No high-risk factor, but also none of the five low-risk factors: range of motion cannot be safely assessed, so radiography is recommended.".to_string(),
         CspineOutcome::LowRiskUnableToRotate => "No high-risk factor and at least one low-risk factor is present, but the patient is unable to actively rotate the neck 45 degrees left and right: radiography is recommended.".to_string(),
         CspineOutcome::LowRiskAbleToRotate => "No high-risk factor, at least one low-risk factor is present, and the patient can actively rotate the neck 45 degrees left and right: radiography is not required by the rule.".to_string(),
-        CspineOutcome::RotationNotAssessed => "No high-risk factor and at least one low-risk factor is present, so active range-of-motion assessment is the deciding step - supply able_to_actively_rotate_neck_45_degrees to complete the rule.".to_string(),
+        CspineOutcome::RotationNotAssessed => "No high-risk factor and at least one low-risk factor is present. To complete the rule, record whether the patient can actively rotate the neck 45 degrees in both directions.".to_string(),
     };
 
     Ok(CalculationResponse {

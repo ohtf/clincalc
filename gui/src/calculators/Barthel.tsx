@@ -111,10 +111,6 @@ const unanswered = (): Answers =>
 const labelOf = (options: readonly Choice<string>[], value: string | null) =>
   options.find((o) => o.value === value)?.label ?? "";
 
-/** The band is only in the interpretation text ("Barthel Index N/100: band."). */
-const bandOf = (interpretation: string) =>
-  /^Barthel Index \d+\/100: ([^.]+)\./.exec(interpretation)?.[1] ?? "";
-
 function BarthelCalculator() {
   const [answers, setAnswers] = useState<Answers>(unanswered);
 
@@ -144,7 +140,7 @@ function BarthelCalculator() {
           ))}
         </SimpleGrid>
       }
-      result={(r) => <ScoreTile value={fmt(r.result)} outOf={100} badge={bandOf(r.interpretation)} />}
+      result={(r) => <ScoreTile value={fmt(r.result)} outOf={100} badge={String(r.working.band ?? "")} />}
       details={(r) => (
         <Facts
           title="Points"
@@ -152,7 +148,7 @@ function BarthelCalculator() {
         />
       )}
       summary={(r) => {
-        const band = bandOf(r.interpretation);
+        const band = String(r.working.band ?? "");
         return summaryText({
           heading: `Barthel Index ${fmt(r.result)} / 100${band ? ` (${band})` : ""}`,
           interpretation: r.interpretation,

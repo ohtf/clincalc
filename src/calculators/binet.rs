@@ -126,8 +126,16 @@ pub fn compute(input: &BinetInput) -> Result<BinetOutcome, CalcError> {
         "Binet stage {} ({} of 5 lymphoid areas involved; haemoglobin below 10 g/dL: {}; platelet count below 100 x10^9/L: {}). This is a historical prognostic stage, not a treatment instruction. The cause and trajectory of cytopenias require clinician attribution. Binet staging omits molecular and other modern prognostic factors.",
         stage.letter(),
         involved_area_count,
-        haemoglobin_below_10_g_dl,
-        platelet_count_below_100_10_9_l,
+        if haemoglobin_below_10_g_dl {
+            "yes"
+        } else {
+            "no"
+        },
+        if platelet_count_below_100_10_9_l {
+            "yes"
+        } else {
+            "no"
+        },
     );
 
     Ok(BinetOutcome {

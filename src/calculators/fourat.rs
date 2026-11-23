@@ -184,14 +184,10 @@ required to reach a diagnosis."
 informant history-taking are usually required."
         ),
         Band::Unlikely => {
-            if input.acute_change {
-                "Score 0: delirium or severe cognitive impairment unlikely.".to_string()
-            } else {
-                "Score 0: delirium or severe cognitive impairment unlikely - but delirium is \
+            "Score 0: delirium or severe cognitive impairment unlikely - but delirium is \
 still possible if the acute-change (item 4) information was incomplete, and more detailed \
 testing may be required depending on the clinical context."
-                    .to_string()
-            }
+                .to_string()
         }
     };
 
