@@ -1,48 +1,30 @@
 // SPDX-FileCopyrightText: 2026 Marcus Baw and Baw Medical Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useEffect, useMemo, useState } from "react";
-import {
-  ActionIcon,
-  Badge,
-  Box,
-  Button,
-  Card,
-  Checkbox,
-  Divider,
-  Group,
-  Loader,
-  NumberInput,
-  Paper,
-  Select,
-  SimpleGrid,
-  Stack,
-  Switch,
-  Text,
-  Textarea,
-  ThemeIcon,
-  Title,
-  Tooltip,
-} from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import {
-  IconAlertCircle,
-  IconCheck,
-  IconCopy,
-  IconDroplet,
-  IconRefresh,
-} from "@tabler/icons-react";
+import { useState } from "react";
+import { Divider, SimpleGrid, Switch } from "@mantine/core";
+import { IconDroplet } from "@tabler/icons-react";
 
-import { calculate, type CalculationResponse } from "../api/calc";
-import type { CalculatorModule } from "../kit";
+import {
+  CalculatorPage,
+  ChoiceField,
+  Facts,
+  inRange,
+  NumberField,
+  ScoreTile,
+  YesNoField,
+  asNumber,
+  asText,
+  summaryText,
+  useCalculation,
+  type CalculatorModule,
+  type Choice,
+} from "../kit";
 
 /**
- * Rockall Score: pre-endoscopy (clinical) and full post-endoscopy risk of
- * rebleeding/mortality after acute upper GI haemorrhage (Rockall 1996).
- * Supplying `diagnosis` and `major_stigmata_of_recent_haemorrhage` together
- * computes the full score; the "Endoscopy performed" switch controls
- * whether those two fields are sent at all - clincalc rejects supplying
- * only one.
+ * Rockall score after acute upper GI haemorrhage (Rockall 1996). The
+ * "Endoscopy performed" switch decides whether the diagnosis and stigmata
+ * are sent at all - the engine rejects only one of the pair.
  */
 
 type Comorbidity =
@@ -54,27 +36,7 @@ type Diagnosis =
   | "all_other_diagnoses"
   | "upper_gi_malignancy";
 
-type Inputs = {
-  age: number;
-  systolic_bp_mm_hg: number;
-  heart_rate_bpm: number;
-  comorbidity: Comorbidity;
-  endoscopyDone: boolean;
-  diagnosis: Diagnosis;
-  major_stigmata_of_recent_haemorrhage: boolean;
-};
-
-const blankInputs = (): Inputs => ({
-  age: 65,
-  systolic_bp_mm_hg: 120,
-  heart_rate_bpm: 80,
-  comorbidity: "nil_major",
-  endoscopyDone: false,
-  diagnosis: "all_other_diagnoses",
-  major_stigmata_of_recent_haemorrhage: false,
-});
-
-const COMORBIDITY_OPTIONS: Array<{ value: Comorbidity; label: string }> = [
+const COMORBIDITY: Choice<Comorbidity>[] = [
   { value: "nil_major", label: "Nil major (0)" },
   {
     value: "cardiac_failure_ischaemic_heart_disease_or_other_major",
@@ -86,7 +48,7 @@ const COMORBIDITY_OPTIONS: Array<{ value: Comorbidity; label: string }> = [
   },
 ];
 
-const DIAGNOSIS_OPTIONS: Array<{ value: Diagnosis; label: string }> = [
+const DIAGNOSIS: Choice<Diagnosis>[] = [
   {
     value: "mallory_weiss_or_no_lesion_identified",
     label: "Mallory-Weiss tear, or no lesion identified (0)",
@@ -95,50 +57,12 @@ const DIAGNOSIS_OPTIONS: Array<{ value: Diagnosis; label: string }> = [
   { value: "upper_gi_malignancy", label: "Upper GI malignancy (2)" },
 ];
 
-function asString(v: unknown): string {
-  if (v === null || v === undefined) return "";
-  if (typeof v === "string") return v;
-  return String(v);
-}
+const AGE = { min: 0, max: 130 };
 
-function label(options: Array<{ value: string; label: string }>, value: string): string {
-  return options.find((o) => o.value === value)?.label ?? value;
-}
+const positive = (v: number | null): v is number => inRange(v, 0) && v > 0;
 
-function toPayload(inputs: Inputs): Record<string, unknown> {
-  const { endoscopyDone, diagnosis, major_stigmata_of_recent_haemorrhage, ...rest } =
-    inputs;
-  if (!endoscopyDone) return rest;
-  return {
-    ...rest,
-    diagnosis,
-    major_stigmata_of_recent_haemorrhage,
-  };
-}
-
-function buildClipboardSummary(r: CalculationResponse, inputs: Inputs): string {
-  const working = r.working ?? {};
-  const kind = asString(working.score_kind);
-  const preEndoscopy = asString(working.pre_endoscopy_score);
-
-  const lines = [
-    `Rockall ${asString(r.result)} (${kind === "Full" ? "full, post-endoscopy" : "pre-endoscopy"})`,
-    "",
-    `Age: ${inputs.age} years`,
-    `Shock: SBP ${inputs.systolic_bp_mm_hg} mmHg, HR ${inputs.heart_rate_bpm} bpm`,
-    `Comorbidity: ${label(COMORBIDITY_OPTIONS, inputs.comorbidity)}`,
-  ];
-  if (inputs.endoscopyDone) {
-    lines.push(`Diagnosis: ${label(DIAGNOSIS_OPTIONS, inputs.diagnosis)}`);
-    lines.push(
-      `Major stigmata of recent haemorrhage: ${inputs.major_stigmata_of_recent_haemorrhage ? "yes" : "no"}`,
-    );
-  } else {
-    lines.push(`Pre-endoscopy subtotal: ${preEndoscopy}/7`);
-  }
-  lines.push("", r.interpretation ?? "");
-  return lines.join("\n");
-}
+const labelOf = <T extends string>(options: Choice<T>[], value: T | null) =>
+  options.find((o) => o.value === value)?.label ?? "";
 
 function scoreColour(kind: string, total: number): string {
   if (kind === "Full") {
@@ -150,281 +74,140 @@ function scoreColour(kind: string, total: number): string {
 }
 
 export function RockallCalculator() {
-  const [inputs, setInputs] = useState<Inputs>(blankInputs());
-  const [response, setResponse] = useState<CalculationResponse | null>(null);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [clipboardText, setClipboardText] = useState("");
+  const [age, setAge] = useState<number | null>(null);
+  const [systolic, setSystolic] = useState<number | null>(null);
+  const [heartRate, setHeartRate] = useState<number | null>(null);
+  const [comorbidity, setComorbidity] = useState<Comorbidity | null>(null);
+  const [endoscopyDone, setEndoscopyDone] = useState(false);
+  const [diagnosis, setDiagnosis] = useState<Diagnosis | null>(null);
+  const [stigmata, setStigmata] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    setPending(true);
-    setError(null);
-    calculate("rockall", toPayload(inputs))
-      .then((r) => {
-        if (cancelled) return;
-        setResponse(r);
-        setClipboardText(buildClipboardSummary(r, inputs));
-      })
-      .catch((e: unknown) => {
-        if (cancelled) return;
-        setError(String(e));
-        setResponse(null);
-      })
-      .finally(() => !cancelled && setPending(false));
-    return () => {
-      cancelled = true;
-    };
-  }, [inputs]);
+  const complete =
+    inRange(age, AGE.min, AGE.max) &&
+    Number.isInteger(age) &&
+    positive(systolic) &&
+    positive(heartRate) &&
+    comorbidity !== null &&
+    (!endoscopyDone || diagnosis !== null);
+  const calc = useCalculation(
+    "rockall",
+    complete
+      ? {
+          age,
+          systolic_bp_mm_hg: systolic,
+          heart_rate_bpm: heartRate,
+          comorbidity,
+          ...(endoscopyDone && { diagnosis, major_stigmata_of_recent_haemorrhage: stigmata }),
+        }
+      : null,
+  );
 
-  const working = response?.working ?? {};
-  const kind = asString(working.score_kind);
-  const total = Number(response?.result ?? 0);
-  const colour = useMemo(() => scoreColour(kind, total), [kind, total]);
-  const maxScore = kind === "Full" ? 11 : 7;
-
-  const reset = () => setInputs(blankInputs());
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(clipboardText);
-      notifications.show({
-        title: "Copied",
-        message: "Rockall result copied.",
-        color: "teal",
-        icon: <IconCheck size={18} />,
-        autoClose: 2000,
-      });
-    } catch {
-      notifications.show({
-        title: "Copy failed",
-        message: "Select the text above and copy manually.",
-        color: "red",
-        icon: <IconAlertCircle size={18} />,
-      });
-    }
-  };
+  const zeroEntered = systolic === 0 || heartRate === 0;
 
   return (
-    <Stack gap="xl" maw={980}>
-      <Group justify="space-between" align="flex-start">
-        <Box>
-          <Group gap="sm" mb={4}>
-            <ThemeIcon size="lg" variant="light" color="teal" radius="md">
-              <IconDroplet size={22} />
-            </ThemeIcon>
-            <Title order={2}>Rockall Score</Title>
-            <Badge color="teal" variant="light">
-              Upper GI bleeding
-            </Badge>
-          </Group>
-          <Text c="dimmed" size="sm">
-            Pre-endoscopy and full post-endoscopy risk of rebleeding and
-            mortality after acute upper GI haemorrhage (Rockall 1996).
-            Complements the pre-endoscopy-only Glasgow-Blatchford score.
-          </Text>
-        </Box>
-        <Tooltip label="Reset to defaults">
-          <ActionIcon variant="subtle" color="gray" onClick={reset} size="lg">
-            <IconRefresh size={18} />
-          </ActionIcon>
-        </Tooltip>
-      </Group>
-
-      <Group className="calc-columns" align="stretch" gap="lg" wrap="nowrap">
-        <Card withBorder padding="lg" radius="lg" style={{ flex: 1 }}>
-          <Stack gap="md">
-            <SimpleGrid cols={3} spacing="md">
-              <NumberInput
-                label="Age"
-                description="years"
-                min={0}
-                max={130}
-                value={inputs.age}
-                onChange={(value) =>
-                  setInputs((prev) => ({ ...prev, age: Number(value) || 0 }))
-                }
-              />
-              <NumberInput
-                label="Systolic BP"
-                description="mmHg"
-                min={1}
-                max={300}
-                value={inputs.systolic_bp_mm_hg}
-                onChange={(value) =>
-                  setInputs((prev) => ({
-                    ...prev,
-                    systolic_bp_mm_hg: Number(value) || 0,
-                  }))
-                }
-              />
-              <NumberInput
-                label="Heart rate"
-                description="bpm"
-                min={1}
-                max={250}
-                value={inputs.heart_rate_bpm}
-                onChange={(value) =>
-                  setInputs((prev) => ({
-                    ...prev,
-                    heart_rate_bpm: Number(value) || 0,
-                  }))
-                }
-              />
-            </SimpleGrid>
-
-            <Select
-              label="Comorbidity"
-              data={COMORBIDITY_OPTIONS}
-              value={inputs.comorbidity}
-              onChange={(value) =>
-                value &&
-                setInputs((prev) => ({
-                  ...prev,
-                  comorbidity: value as Comorbidity,
-                }))
-              }
-              allowDeselect={false}
+    <CalculatorPage
+      icon={IconDroplet}
+      title="Rockall Score"
+      badge="Upper GI bleeding"
+      description="Pre-endoscopy and full post-endoscopy risk of rebleeding and mortality after acute upper GI haemorrhage (Rockall 1996). Complements the pre-endoscopy-only Glasgow-Blatchford score."
+      onReset={() => {
+        setAge(null);
+        setSystolic(null);
+        setHeartRate(null);
+        setComorbidity(null);
+        setEndoscopyDone(false);
+        setDiagnosis(null);
+        setStigmata(false);
+      }}
+      calc={calc}
+      maw={980}
+      incomplete={
+        zeroEntered
+          ? "Systolic BP and heart rate must be above 0."
+          : endoscopyDone
+            ? "Enter age, systolic BP, heart rate, comorbidity, and the endoscopic diagnosis to calculate."
+            : "Enter age, systolic BP, heart rate, and comorbidity to calculate."
+      }
+      form={
+        <>
+          <SimpleGrid cols={3} spacing="md">
+            <NumberField
+              label="Age"
+              unit="years"
+              value={age}
+              onChange={setAge}
+              min={AGE.min}
+              max={AGE.max}
+              decimals={0}
             />
-
-            <Divider />
-
-            <Switch
-              label="Endoscopy performed"
-              description="Add the diagnosis and stigmata to compute the full post-endoscopy score"
-              checked={inputs.endoscopyDone}
-              onChange={(e) => {
-                const checked = e.currentTarget.checked;
-                setInputs((prev) => ({ ...prev, endoscopyDone: checked }));
-              }}
+            <NumberField label="Systolic BP" unit="mmHg" value={systolic} onChange={setSystolic} min={0} />
+            <NumberField label="Heart rate" unit="bpm" value={heartRate} onChange={setHeartRate} min={0} />
+          </SimpleGrid>
+          <ChoiceField
+            label="Comorbidity"
+            value={comorbidity}
+            onChange={setComorbidity}
+            options={COMORBIDITY}
+          />
+          <Divider />
+          <Switch
+            label="Endoscopy performed"
+            description="Add the diagnosis and stigmata to compute the full post-endoscopy score"
+            checked={endoscopyDone}
+            onChange={(e) => setEndoscopyDone(e.currentTarget.checked)}
+          />
+          {endoscopyDone && (
+            <>
+              <ChoiceField
+                label="Endoscopic diagnosis"
+                value={diagnosis}
+                onChange={setDiagnosis}
+                options={DIAGNOSIS}
+              />
+              <YesNoField
+                label="Major stigmata of recent haemorrhage"
+                hint="Blood in the upper GI tract, an adherent clot, or a visible/spurting vessel"
+                checked={stigmata}
+                onChange={setStigmata}
+              />
+            </>
+          )}
+        </>
+      }
+      result={(r) => {
+        const kind = asText(r.working.score_kind);
+        return (
+          <>
+            <ScoreTile
+              value={asText(r.result)}
+              outOf={kind === "Full" ? 11 : 7}
+              colour={scoreColour(kind, asNumber(r.result) ?? 0)}
+              badge={kind === "Full" ? "full" : "pre-endoscopy"}
             />
-
-            {inputs.endoscopyDone && (
-              <>
-                <Select
-                  label="Endoscopic diagnosis"
-                  data={DIAGNOSIS_OPTIONS}
-                  value={inputs.diagnosis}
-                  onChange={(value) =>
-                    value &&
-                    setInputs((prev) => ({
-                      ...prev,
-                      diagnosis: value as Diagnosis,
-                    }))
-                  }
-                  allowDeselect={false}
-                />
-                <Checkbox
-                  size="md"
-                  label="Major stigmata of recent haemorrhage"
-                  description="Blood in the upper GI tract, an adherent clot, or a visible/spurting vessel"
-                  checked={inputs.major_stigmata_of_recent_haemorrhage}
-                  onChange={(e) => {
-                    const checked = e.currentTarget.checked;
-                    setInputs((prev) => ({
-                      ...prev,
-                      major_stigmata_of_recent_haemorrhage: checked,
-                    }));
-                  }}
-                />
-              </>
+            {kind === "Full" && (
+              <Facts
+                items={[["Pre-endoscopy subtotal", `${asText(r.working.pre_endoscopy_score)}/7`]]}
+              />
             )}
-          </Stack>
-        </Card>
-
-        <Card
-          withBorder
-          padding="lg"
-          radius="lg"
-          style={{ flex: 1 }}
-          bg="var(--mantine-color-default-hover)"
-        >
-          <Stack gap="md" h="100%">
-            <Text fw={600} c="dimmed" size="sm" tt="uppercase">
-              Result
-            </Text>
-            {pending && !response && (
-              <Group gap="xs">
-                <Loader size="xs" />
-                <Text c="dimmed">Computing…</Text>
-              </Group>
-            )}
-            {error && (
-              <Text c="red" size="sm">
-                {error}
-              </Text>
-            )}
-            {response && (
-              <>
-                <Group align="baseline" gap="xs">
-                  <Title order={1} c={colour} fz={64} lh={1}>
-                    {String(response.result)}
-                  </Title>
-                  <Text c="dimmed" fz="lg">
-                    / {maxScore}
-                  </Text>
-                  <Badge ml="auto" color={colour} variant="light" size="lg">
-                    {kind === "Full" ? "full" : "pre-endoscopy"}
-                  </Badge>
-                </Group>
-                <Text size="sm" style={{ lineHeight: 1.55 }}>
-                  {response.interpretation}
-                </Text>
-                {kind === "Full" && (
-                  <>
-                    <Divider my={4} />
-                    <Badge variant="outline" color="gray" w="fit-content">
-                      Pre-endoscopy subtotal: {asString(working.pre_endoscopy_score)}/7
-                    </Badge>
-                  </>
-                )}
-              </>
-            )}
-          </Stack>
-        </Card>
-      </Group>
-
-      {response && (
-        <Paper
-          withBorder
-          radius="lg"
-          p="lg"
-          className="clipboard-preview"
-          style={{ borderColor: "var(--mantine-color-teal-4)", borderWidth: 2 }}
-        >
-          <Stack gap="sm">
-            <Group justify="space-between" align="center">
-              <Box>
-                <Text fw={700} size="md">
-                  Paste-ready summary
-                </Text>
-                <Text size="xs" c="dimmed">
-                  Edit freely before copying - your edits are preserved.
-                </Text>
-              </Box>
-              <Button
-                leftSection={<IconCopy size={16} />}
-                color="teal"
-                onClick={copy}
-              >
-                Copy result
-              </Button>
-            </Group>
-            <Textarea
-              autosize
-              minRows={9}
-              maxRows={12}
-              value={clipboardText}
-              onChange={(e) => setClipboardText(e.currentTarget.value)}
-              styles={{ input: { background: "var(--mantine-color-body)" } }}
-            />
-            <Text size="xs" c="dimmed">
-              Reference: {response.reference}
-            </Text>
-          </Stack>
-        </Paper>
-      )}
-    </Stack>
+          </>
+        );
+      }}
+      summary={(r) => {
+        const full = asText(r.working.score_kind) === "Full";
+        return summaryText({
+          heading: `Rockall ${asText(r.result)} (${full ? "full, post-endoscopy" : "pre-endoscopy"})`,
+          interpretation: r.interpretation,
+          extra: [
+            `Age: ${age} years`,
+            `Shock: SBP ${systolic} mmHg, HR ${heartRate} bpm`,
+            `Comorbidity: ${labelOf(COMORBIDITY, comorbidity)}`,
+            full && `Diagnosis: ${labelOf(DIAGNOSIS, diagnosis)}`,
+            full && `Major stigmata of recent haemorrhage: ${stigmata ? "yes" : "no"}`,
+            !full && `Pre-endoscopy subtotal: ${asText(r.working.pre_endoscopy_score)}/7`,
+          ],
+        });
+      }}
+    />
   );
 }
 

@@ -1,76 +1,52 @@
 // SPDX-FileCopyrightText: 2026 Marcus Baw and Baw Medical Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useEffect, useMemo, useState } from "react";
-import {
-  ActionIcon,
-  Badge,
-  Box,
-  Button,
-  Card,
-  Checkbox,
-  Divider,
-  Group,
-  Loader,
-  NumberInput,
-  Paper,
-  SegmentedControl,
-  SimpleGrid,
-  Stack,
-  Text,
-  Textarea,
-  ThemeIcon,
-  Title,
-  Tooltip,
-} from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import {
-  IconActivity,
-  IconAlertCircle,
-  IconCheck,
-  IconCopy,
-  IconRefresh,
-} from "@tabler/icons-react";
+import { useState } from "react";
+import { Badge, Divider, SimpleGrid } from "@mantine/core";
+import { IconActivity } from "@tabler/icons-react";
 
-import { calculate, type CalculationResponse } from "../api/calc";
-import type { CalculatorModule } from "../kit";
+import {
+  CalculatorPage,
+  ChoiceField,
+  Facts,
+  inRange,
+  NumberField,
+  ScoreTile,
+  YesNoField,
+  asText,
+  summaryText,
+  useCalculation,
+  type CalculatorModule,
+  type Choice,
+} from "../kit";
 
 /**
- * NEWS2: NHS-mandated aggregate physiology score (RCP 2017) driving the
- * clinical-response band. Scale 2 (hypercapnic respiratory failure, e.g.
- * COPD, with a prescribed 88-92% target) is a distinct toggle because it
- * changes how the same SpO2 reading is scored.
+ * NEWS2 aggregate physiology score and clinical-response band (RCP 2017).
+ * Scale 2 changes how the same SpO2 reading is scored, so it is an explicit
+ * choice; Scale 1 is the source's default.
  */
 
+type Scale = "1" | "2";
 type Consciousness = "alert" | "confusion-or-vpu";
 
-type Inputs = {
-  respiratory_rate: number;
-  spo2: number;
-  spo2_scale: "1" | "2";
-  on_oxygen: boolean;
-  systolic_bp: number;
-  pulse: number;
-  consciousness: Consciousness;
-  temperature: number;
-};
+const SCALE: Choice<Scale>[] = [
+  { value: "1", label: "Scale 1 (default)" },
+  { value: "2", label: "Scale 2 (COPD, target 88-92%)" },
+];
 
-const blankInputs = (): Inputs => ({
-  respiratory_rate: 16,
-  spo2: 98,
-  spo2_scale: "1",
-  on_oxygen: false,
-  systolic_bp: 120,
-  pulse: 75,
-  consciousness: "alert",
-  temperature: 36.8,
-});
+const CONSCIOUSNESS: Choice<Consciousness>[] = [
+  { value: "alert", label: "Alert" },
+  { value: "confusion-or-vpu", label: "New confusion / V / P / U" },
+];
 
-function asString(v: unknown): string {
-  if (v === null || v === undefined) return "";
-  if (typeof v === "string") return v;
-  return String(v);
-}
+const RR = { min: 0, max: 80 };
+const SPO2 = { min: 0, max: 100 };
+const SBP = { min: 0, max: 300 };
+const PULSE = { min: 0, max: 300 };
+const TEMP = { min: 20, max: 45 };
+
+const isInt = (v: number | null, r: { min: number; max: number }) =>
+  inRange(v, r.min, r.max) && Number.isInteger(v);
 
 function bandColour(band: string): string {
   if (band === "high") return "red";
@@ -80,346 +56,175 @@ function bandColour(band: string): string {
   return "teal";
 }
 
-function buildClipboardSummary(r: CalculationResponse, inputs: Inputs): string {
-  const working = r.working ?? {};
-  const band = asString(working.band);
-
-  return [
-    `NEWS2 ${asString(r.result)} (${band})`,
-    "",
-    `Respiratory rate: ${inputs.respiratory_rate}/min (${asString(working.respiratory_rate_score ?? "")})`,
-    `SpO2: ${inputs.spo2}% on scale ${inputs.spo2_scale}${inputs.on_oxygen ? ", on oxygen" : ", on air"} (${asString(working.spo2_score ?? "")})`,
-    `Air/oxygen: ${asString(working.air_or_oxygen_score ?? "")}`,
-    `Systolic BP: ${inputs.systolic_bp} mmHg (${asString(working.systolic_bp_score ?? "")})`,
-    `Pulse: ${inputs.pulse} bpm (${asString(working.pulse_score ?? "")})`,
-    `Consciousness: ${inputs.consciousness} (${asString(working.consciousness_score ?? "")})`,
-    `Temperature: ${inputs.temperature} degC (${asString(working.temperature_score ?? "")})`,
-    "",
-    r.interpretation ?? "",
-  ].join("\n");
-}
+const labelOf = <T extends string>(options: Choice<T>[], value: T | null) =>
+  options.find((o) => o.value === value)?.label ?? "";
 
 export function News2Calculator() {
-  const [inputs, setInputs] = useState<Inputs>(blankInputs());
-  const [response, setResponse] = useState<CalculationResponse | null>(null);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [clipboardText, setClipboardText] = useState("");
+  const [respiratoryRate, setRespiratoryRate] = useState<number | null>(null);
+  const [spo2, setSpo2] = useState<number | null>(null);
+  const [scale, setScale] = useState<Scale>("1");
+  const [onOxygen, setOnOxygen] = useState(false);
+  const [systolic, setSystolic] = useState<number | null>(null);
+  const [pulse, setPulse] = useState<number | null>(null);
+  const [temperature, setTemperature] = useState<number | null>(null);
+  const [consciousness, setConsciousness] = useState<Consciousness | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    setPending(true);
-    setError(null);
-    calculate("news2", inputs as unknown as Record<string, unknown>)
-      .then((r) => {
-        if (cancelled) return;
-        setResponse(r);
-        setClipboardText(buildClipboardSummary(r, inputs));
-      })
-      .catch((e: unknown) => {
-        if (cancelled) return;
-        setError(String(e));
-        setResponse(null);
-      })
-      .finally(() => !cancelled && setPending(false));
-    return () => {
-      cancelled = true;
-    };
-  }, [inputs]);
-
-  const working = response?.working ?? {};
-  const band = asString(working.band);
-  const colour = useMemo(() => bandColour(band), [band]);
-  const singleParameter3 = working.single_parameter_3 === true;
-
-  const reset = () => setInputs(blankInputs());
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(clipboardText);
-      notifications.show({
-        title: "Copied",
-        message: "NEWS2 result copied.",
-        color: "teal",
-        icon: <IconCheck size={18} />,
-        autoClose: 2000,
-      });
-    } catch {
-      notifications.show({
-        title: "Copy failed",
-        message: "Select the text above and copy manually.",
-        color: "red",
-        icon: <IconAlertCircle size={18} />,
-      });
-    }
-  };
+  const complete =
+    isInt(respiratoryRate, RR) &&
+    isInt(spo2, SPO2) &&
+    isInt(systolic, SBP) &&
+    isInt(pulse, PULSE) &&
+    inRange(temperature, TEMP.min, TEMP.max) &&
+    consciousness !== null;
+  const calc = useCalculation(
+    "news2",
+    complete
+      ? {
+          respiratory_rate: respiratoryRate,
+          spo2,
+          spo2_scale: scale,
+          on_oxygen: onOxygen,
+          systolic_bp: systolic,
+          pulse,
+          consciousness,
+          temperature,
+        }
+      : null,
+  );
 
   return (
-    <Stack gap="xl" maw={980}>
-      <Group justify="space-between" align="flex-start">
-        <Box>
-          <Group gap="sm" mb={4}>
-            <ThemeIcon size="lg" variant="light" color="teal" radius="md">
-              <IconActivity size={22} />
-            </ThemeIcon>
-            <Title order={2}>NEWS2</Title>
-            <Badge color="teal" variant="light">
-              NHS-mandated
-            </Badge>
-          </Group>
-          <Text c="dimmed" size="sm">
-            National Early Warning Score 2 (RCP 2017): aggregate physiology
-            score driving the clinical-response band.
-          </Text>
-        </Box>
-        <Tooltip label="Reset to normal observations">
-          <ActionIcon variant="subtle" color="gray" onClick={reset} size="lg">
-            <IconRefresh size={18} />
-          </ActionIcon>
-        </Tooltip>
-      </Group>
-
-      <Group className="calc-columns" align="stretch" gap="lg" wrap="nowrap">
-        <Card withBorder padding="lg" radius="lg" style={{ flex: 1 }}>
-          <Stack gap="md">
-            <SimpleGrid cols={2} spacing="md">
-              <NumberInput
-                label="Respiratory rate"
-                description="breaths/min"
-                min={0}
-                max={60}
-                value={inputs.respiratory_rate}
-                onChange={(value) =>
-                  setInputs((prev) => ({
-                    ...prev,
-                    respiratory_rate: Number(value) || 0,
-                  }))
-                }
-              />
-              <NumberInput
-                label="SpO2"
-                description="%"
-                min={0}
-                max={100}
-                value={inputs.spo2}
-                onChange={(value) =>
-                  setInputs((prev) => ({ ...prev, spo2: Number(value) || 0 }))
-                }
-              />
-            </SimpleGrid>
-
-            <Box>
-              <Text fw={500} size="sm" mb={4}>
-                SpO2 scale
-              </Text>
-              <SegmentedControl
-                fullWidth
-                value={inputs.spo2_scale}
-                onChange={(value) =>
-                  setInputs((prev) => ({
-                    ...prev,
-                    spo2_scale: value as "1" | "2",
-                  }))
-                }
-                data={[
-                  { value: "1", label: "Scale 1 (default)" },
-                  { value: "2", label: "Scale 2 (COPD, target 88-92%)" },
-                ]}
-              />
-            </Box>
-
-            <Checkbox
-              size="md"
-              label="Receiving supplemental oxygen"
-              checked={inputs.on_oxygen}
-              onChange={(e) => {
-                const checked = e.currentTarget.checked;
-                setInputs((prev) => ({ ...prev, on_oxygen: checked }));
-              }}
+    <CalculatorPage
+      icon={IconActivity}
+      title="NEWS2"
+      badge="NHS-mandated"
+      description="National Early Warning Score 2 (RCP 2017): aggregate physiology score driving the clinical-response band."
+      onReset={() => {
+        setRespiratoryRate(null);
+        setSpo2(null);
+        setScale("1");
+        setOnOxygen(false);
+        setSystolic(null);
+        setPulse(null);
+        setTemperature(null);
+        setConsciousness(null);
+      }}
+      calc={calc}
+      maw={980}
+      incomplete="Enter all six observations and the level of consciousness to calculate."
+      form={
+        <>
+          <SimpleGrid cols={2} spacing="md">
+            <NumberField
+              label="Respiratory rate"
+              unit="breaths/min"
+              value={respiratoryRate}
+              onChange={setRespiratoryRate}
+              min={RR.min}
+              max={RR.max}
+              decimals={0}
             />
-
-            <Divider />
-
-            <SimpleGrid cols={2} spacing="md">
-              <NumberInput
-                label="Systolic BP"
-                description="mmHg"
-                min={0}
-                max={300}
-                value={inputs.systolic_bp}
-                onChange={(value) =>
-                  setInputs((prev) => ({
-                    ...prev,
-                    systolic_bp: Number(value) || 0,
-                  }))
-                }
-              />
-              <NumberInput
-                label="Pulse"
-                description="bpm"
-                min={0}
-                max={250}
-                value={inputs.pulse}
-                onChange={(value) =>
-                  setInputs((prev) => ({ ...prev, pulse: Number(value) || 0 }))
-                }
-              />
-            </SimpleGrid>
-
-            <NumberInput
-              label="Temperature"
-              description="degC"
-              min={25}
-              max={43}
-              step={0.1}
-              decimalScale={1}
-              value={inputs.temperature}
-              onChange={(value) =>
-                setInputs((prev) => ({
-                  ...prev,
-                  temperature: Number(value) || 0,
-                }))
-              }
+            <NumberField
+              label="SpO2"
+              unit="%"
+              value={spo2}
+              onChange={setSpo2}
+              min={SPO2.min}
+              max={SPO2.max}
+              decimals={0}
             />
-
-            <Box>
-              <Text fw={500} size="sm" mb={4}>
-                Consciousness (ACVPU)
-              </Text>
-              <SegmentedControl
-                fullWidth
-                value={inputs.consciousness}
-                onChange={(value) =>
-                  setInputs((prev) => ({
-                    ...prev,
-                    consciousness: value as Consciousness,
-                  }))
-                }
-                data={[
-                  { value: "alert", label: "Alert" },
-                  { value: "confusion-or-vpu", label: "New confusion / V / P / U" },
-                ]}
-              />
-            </Box>
-          </Stack>
-        </Card>
-
-        <Card
-          withBorder
-          padding="lg"
-          radius="lg"
-          style={{ flex: 1 }}
-          bg="var(--mantine-color-default-hover)"
-        >
-          <Stack gap="md" h="100%">
-            <Text fw={600} c="dimmed" size="sm" tt="uppercase">
-              Result
-            </Text>
-            {pending && !response && (
-              <Group gap="xs">
-                <Loader size="xs" />
-                <Text c="dimmed">Computing…</Text>
-              </Group>
-            )}
-            {error && (
-              <Text c="red" size="sm">
-                {error}
-              </Text>
-            )}
-            {response && (
-              <>
-                <Group align="baseline" gap="xs">
-                  <Title order={1} c={colour} fz={64} lh={1}>
-                    {String(response.result)}
-                  </Title>
-                  <Badge ml="auto" color={colour} variant="light" size="lg">
-                    {band || "—"}
-                  </Badge>
-                </Group>
-                {singleParameter3 && (
-                  <Badge color="yellow" variant="light" w="fit-content">
-                    Single red score (3)
-                  </Badge>
-                )}
-                <Text size="sm" style={{ lineHeight: 1.55 }}>
-                  {response.interpretation}
-                </Text>
-                <Divider my={4} />
-                <Stack gap={4}>
-                  <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
-                    Per-parameter scores
-                  </Text>
-                  <Group gap="xs" wrap="wrap">
-                    <Badge variant="outline" color="gray">
-                      RR: {asString(working.respiratory_rate_score)}
-                    </Badge>
-                    <Badge variant="outline" color="gray">
-                      SpO2: {asString(working.spo2_score)}
-                    </Badge>
-                    <Badge variant="outline" color="gray">
-                      O2: {asString(working.air_or_oxygen_score)}
-                    </Badge>
-                    <Badge variant="outline" color="gray">
-                      SBP: {asString(working.systolic_bp_score)}
-                    </Badge>
-                    <Badge variant="outline" color="gray">
-                      Pulse: {asString(working.pulse_score)}
-                    </Badge>
-                    <Badge variant="outline" color="gray">
-                      Conscious: {asString(working.consciousness_score)}
-                    </Badge>
-                    <Badge variant="outline" color="gray">
-                      Temp: {asString(working.temperature_score)}
-                    </Badge>
-                  </Group>
-                </Stack>
-              </>
-            )}
-          </Stack>
-        </Card>
-      </Group>
-
-      {response && (
-        <Paper
-          withBorder
-          radius="lg"
-          p="lg"
-          className="clipboard-preview"
-          style={{ borderColor: "var(--mantine-color-teal-4)", borderWidth: 2 }}
-        >
-          <Stack gap="sm">
-            <Group justify="space-between" align="center">
-              <Box>
-                <Text fw={700} size="md">
-                  Paste-ready summary
-                </Text>
-                <Text size="xs" c="dimmed">
-                  Edit freely before copying - your edits are preserved.
-                </Text>
-              </Box>
-              <Button
-                leftSection={<IconCopy size={16} />}
-                color="teal"
-                onClick={copy}
-              >
-                Copy result
-              </Button>
-            </Group>
-            <Textarea
-              autosize
-              minRows={11}
-              maxRows={14}
-              value={clipboardText}
-              onChange={(e) => setClipboardText(e.currentTarget.value)}
-              styles={{ input: { background: "var(--mantine-color-body)" } }}
+          </SimpleGrid>
+          <ChoiceField
+            label="SpO2 scale"
+            value={scale}
+            onChange={setScale}
+            options={SCALE}
+            layout="segmented"
+          />
+          <YesNoField label="Receiving supplemental oxygen" checked={onOxygen} onChange={setOnOxygen} />
+          <Divider />
+          <SimpleGrid cols={2} spacing="md">
+            <NumberField
+              label="Systolic BP"
+              unit="mmHg"
+              value={systolic}
+              onChange={setSystolic}
+              min={SBP.min}
+              max={SBP.max}
+              decimals={0}
             />
-            <Text size="xs" c="dimmed">
-              Reference: {response.reference}
-            </Text>
-          </Stack>
-        </Paper>
+            <NumberField
+              label="Pulse"
+              unit="bpm"
+              value={pulse}
+              onChange={setPulse}
+              min={PULSE.min}
+              max={PULSE.max}
+              decimals={0}
+            />
+          </SimpleGrid>
+          <NumberField
+            label="Temperature"
+            unit="°C"
+            value={temperature}
+            onChange={setTemperature}
+            min={TEMP.min}
+            max={TEMP.max}
+            step={0.1}
+            decimals={1}
+          />
+          <ChoiceField
+            label="Consciousness (ACVPU)"
+            value={consciousness}
+            onChange={setConsciousness}
+            options={CONSCIOUSNESS}
+            layout="segmented"
+          />
+        </>
+      }
+      result={(r) => {
+        const band = asText(r.working.band);
+        return (
+          <>
+            <ScoreTile value={asText(r.result)} colour={bandColour(band)} badge={band || "—"} />
+            {r.working.single_parameter_3 === true && (
+              <Badge color="yellow" variant="light" w="fit-content">
+                Single red score (3)
+              </Badge>
+            )}
+          </>
+        );
+      }}
+      details={(r) => (
+        <Facts
+          title="Per-parameter scores"
+          items={[
+            ["RR", asText(r.working.respiratory_rate_score)],
+            ["SpO2", asText(r.working.spo2_score)],
+            ["O2", asText(r.working.air_or_oxygen_score)],
+            ["SBP", asText(r.working.systolic_bp_score)],
+            ["Pulse", asText(r.working.pulse_score)],
+            ["Conscious", asText(r.working.consciousness_score)],
+            ["Temp", asText(r.working.temperature_score)],
+          ]}
+        />
       )}
-    </Stack>
+      summary={(r) => {
+        const w = r.working;
+        return summaryText({
+          heading: `NEWS2 ${asText(r.result)} (${asText(w.band)})`,
+          interpretation: r.interpretation,
+          extra: [
+            `Respiratory rate: ${respiratoryRate}/min (${asText(w.respiratory_rate_score)})`,
+            `SpO2: ${spo2}% on scale ${scale}${onOxygen ? ", on oxygen" : ", on air"} (${asText(w.spo2_score)})`,
+            `Air/oxygen: ${asText(w.air_or_oxygen_score)}`,
+            `Systolic BP: ${systolic} mmHg (${asText(w.systolic_bp_score)})`,
+            `Pulse: ${pulse} bpm (${asText(w.pulse_score)})`,
+            `Consciousness: ${labelOf(CONSCIOUSNESS, consciousness)} (${asText(w.consciousness_score)})`,
+            `Temperature: ${temperature} degC (${asText(w.temperature_score)})`,
+          ],
+        });
+      }}
+    />
   );
 }
 
