@@ -29,7 +29,9 @@
 
 ## Layout
 
-- AppShell with 56px header + 280px sidebar + main pane.
+- AppShell with 56px header + sidebar + main pane. The sidebar defaults to 360px and is user-resizable (260-640px, by drag or arrow keys on its edge, double-click to reset), remembered in `localStorage`; below the `md` breakpoint it becomes a burger menu.
+- Layout rules respond to the main pane's width (CSS container queries in `App.css`), not the viewport's, because the sidebar width varies.
+- When the main pane is at least 1400px wide, the engine panel moves into a sticky column to the right of the calculator, so the form and its JSON are visible together; otherwise it sits below.
 - Sidebar: filter input + "Featured" (FeverPAIN, CHA2DS2-VASc, QRISK3) + "All calculators" alphabetical.
 - Each calculator's main pane uses a two-card layout: form on the left, live result on the right.
 - The **paste-ready summary** sits below, in a teal-bordered card to draw the eye - this is the headline feature.
@@ -45,13 +47,13 @@ Web-only differences, all keyed off the runtime rather than separate code paths:
 
 - **Playground notice.** A non-dismissable strip at the top of every page: an evaluation playground, not for clinical decisions about real patients, and nothing entered leaves the browser. This is the per-surface demarcation that `regulatory/position-published-source-not-a-device.md` section 6 calls for; it is not a disclaimer bolted onto a clinical product.
 - **Engine panel open by default** (collapsed on the desktop).
-- **Mobile layouts matter.** Form and result cards stack below 62em (`.calc-columns` in `App.css`).
+- **Mobile layouts matter.** Form and result cards stack when the main pane is under 720px (`.calc-columns` in `App.css`).
 
 `#name` in the URL selects a calculator on both runtimes, so pages are linkable (`try/#acmi`).
 
-## The engine panel ("Under the hood")
+## The engine panel ("JSON input")
 
-Below every available calculator, hand-crafted or not, sits the engine contract: the exact JSON request the engine received, its JSON response, and the same call as a `clincalc calc` command, a `curl` against `clincalc api`, and a Python snippet. This is deliberate positioning: clincalc is not another web calculator but an engine that EPRs and pipelines can embed, and the panel shows that layer directly.
+With every available calculator, hand-crafted or not, sits the engine contract: the exact JSON request the engine received, its JSON response, and the same call as a `clincalc calc` command, a `curl` against `clincalc api`, and a Python snippet. This is deliberate positioning: clincalc is not another web calculator but an engine that EPRs and pipelines can embed, and the panel shows that layer directly.
 
 - For a hand-crafted calculator, the panel follows the form (via the last-calculation record in `api/calc.ts`, so components need no wiring) until the request is edited; "Follow the form" re-attaches it.
 - For a calculator without a form, the "Form coming soon" placeholder points to the panel, which starts from the input template `clincalc calc <name>` prints. That is the CLI contract in the browser, not a generated form, so it does not contradict the hand-crafting rule below.

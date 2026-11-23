@@ -19,7 +19,7 @@ gui/
 │   ├── App.tsx            AppShell + sidebar nav + filter + locale picker
 │   ├── App.css            Thin overrides on top of Mantine
 │   ├── api/calc.ts        Engine transport: Tauri invoke (desktop) or WebAssembly (web)
-│   ├── EnginePanel.tsx    "Under the hood" JSON contract panel under every calculator
+│   ├── EnginePanel.tsx    "JSON input" panel: the engine contract for every calculator
 │   ├── locale.ts          Current-locale store, HTML lang/dir, RTL readiness
 │   └── calculators/
 │       ├── Acmi.tsx

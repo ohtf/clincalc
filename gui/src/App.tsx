@@ -1,7 +1,13 @@
 // SPDX-FileCopyrightText: 2026 Marcus Baw and Baw Medical Ltd
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useEffect, useState, type ReactElement } from "react";
+import {
+  useEffect,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactElement,
+} from "react";
 import {
   ActionIcon,
   AppShell,
@@ -83,6 +89,98 @@ const FEATURED = ["feverpain", "cha2ds2vasc", "qrisk3"];
 const DEFAULT_CALCULATOR = "feverpain";
 
 const DOCS_URL = "https://ohtf.github.io/clincalc/";
+
+const SIDEBAR_WIDTH = { initial: 360, min: 260, max: 640, step: 16 };
+const SIDEBAR_STORAGE_KEY = "clincalc.sidebarWidth";
+
+function clampSidebarWidth(width: number): number {
+  return Math.round(Math.min(SIDEBAR_WIDTH.max, Math.max(SIDEBAR_WIDTH.min, width)));
+}
+
+function useSidebarWidth(): [number, (width: number) => void] {
+  const [width, setWidth] = useState(() => {
+    try {
+      const stored = Number(localStorage.getItem(SIDEBAR_STORAGE_KEY));
+      return stored ? clampSidebarWidth(stored) : SIDEBAR_WIDTH.initial;
+    } catch {
+      return SIDEBAR_WIDTH.initial;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_STORAGE_KEY, String(width));
+    } catch {
+      // Storage can be unavailable (private browsing); the width just won't persist.
+    }
+  }, [width]);
+
+  return [width, (next) => setWidth(clampSidebarWidth(next))];
+}
+
+/** Drag handle on the sidebar's inner edge; also keyboard-operable. */
+function SidebarResizer({
+  width,
+  onResize,
+}: {
+  width: number;
+  onResize: (width: number) => void;
+}) {
+  const [dragging, setDragging] = useState(false);
+
+  const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const handle = e.currentTarget;
+    const startX = e.clientX;
+    const startWidth = width;
+    const direction = document.documentElement.dir === "rtl" ? -1 : 1;
+    handle.setPointerCapture(e.pointerId);
+    setDragging(true);
+    const onMove = (ev: PointerEvent) =>
+      onResize(startWidth + direction * (ev.clientX - startX));
+    const onUp = () => {
+      handle.removeEventListener("pointermove", onMove);
+      handle.removeEventListener("pointerup", onUp);
+      handle.removeEventListener("pointercancel", onUp);
+      setDragging(false);
+    };
+    handle.addEventListener("pointermove", onMove);
+    handle.addEventListener("pointerup", onUp);
+    handle.addEventListener("pointercancel", onUp);
+  };
+
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const moves: Record<string, number> = {
+      ArrowLeft: width - SIDEBAR_WIDTH.step,
+      ArrowRight: width + SIDEBAR_WIDTH.step,
+      Home: SIDEBAR_WIDTH.min,
+      End: SIDEBAR_WIDTH.max,
+    };
+    if (e.key in moves) {
+      e.preventDefault();
+      onResize(moves[e.key]);
+    }
+  };
+
+  return (
+    <Box
+      visibleFrom="md"
+      className="sidebar-resizer"
+      data-dragging={dragging || undefined}
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize calculator list"
+      aria-valuenow={width}
+      aria-valuemin={SIDEBAR_WIDTH.min}
+      aria-valuemax={SIDEBAR_WIDTH.max}
+      title="Drag to resize; double-click to reset"
+      tabIndex={0}
+      onPointerDown={onPointerDown}
+      onKeyDown={onKeyDown}
+      onDoubleClick={() => onResize(SIDEBAR_WIDTH.initial)}
+    />
+  );
+}
 
 function calculatorFromHash(): string {
   return decodeURIComponent(window.location.hash.slice(1)) || DEFAULT_CALCULATOR;
@@ -293,6 +391,7 @@ export default function App() {
   const [selected, setSelected] = useState<string>(calculatorFromHash);
   const [query, setQuery] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useSidebarWidth();
 
   useEffect(() => {
     listCalculators()
@@ -355,8 +454,8 @@ export default function App() {
     <AppShell
       header={{ height: web ? 92 : 56 }}
       navbar={{
-        width: 280,
-        breakpoint: "sm",
+        width: sidebarWidth,
+        breakpoint: "md",
         collapsed: { mobile: !mobileNavOpen },
       }}
       padding="lg"
@@ -368,7 +467,7 @@ export default function App() {
             <Burger
               opened={mobileNavOpen}
               onClick={() => setMobileNavOpen((open) => !open)}
-              hiddenFrom="sm"
+              hiddenFrom="md"
               size="sm"
               aria-label="Toggle calculator navigation"
             />
@@ -406,6 +505,7 @@ export default function App() {
       </AppShell.Header>
 
       <AppShell.Navbar p="sm">
+        <SidebarResizer width={sidebarWidth} onResize={setSidebarWidth} />
         <Stack gap="xs" h="100%">
           <TextInput
             placeholder="Filter calculators…"
@@ -496,10 +596,14 @@ export default function App() {
         )}
         {!error && current?.unavailable && <Unavailable calc={current} />}
         {!error && current && !current.unavailable && (
-          <Stack gap="xl">
-            {Body ? <Body key={current.name} /> : <ComingSoon calc={current} />}
-            <EnginePanel calc={current} crafted={!!Body} />
-          </Stack>
+          <div className="calc-layout">
+            <div className="calc-layout-form">
+              {Body ? <Body key={current.name} /> : <ComingSoon calc={current} />}
+            </div>
+            <div className="calc-layout-engine">
+              <EnginePanel calc={current} crafted={!!Body} />
+            </div>
+          </div>
         )}
       </AppShell.Main>
     </AppShell>
@@ -523,7 +627,7 @@ function CalcLink({
       onClick={onClick}
       label={
         <Group justify="space-between" wrap="nowrap" gap="xs">
-          <Text size="sm" truncate>
+          <Text size="sm" truncate title={calc.title} style={{ minWidth: 0 }}>
             {calc.title}
           </Text>
           {calc.unavailable && (
@@ -531,12 +635,13 @@ function CalcLink({
               size="xs"
               color={calc.proprietary ? "red" : "orange"}
               variant="light"
+              style={{ flexShrink: 0 }}
             >
               unavailable
             </Badge>
           )}
           {!calc.unavailable && implemented && (
-            <Badge size="xs" color="teal" variant="light">
+            <Badge size="xs" color="teal" variant="light" style={{ flexShrink: 0 }}>
               ready
             </Badge>
           )}

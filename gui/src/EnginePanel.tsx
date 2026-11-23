@@ -13,7 +13,6 @@ import {
   CopyButton,
   Group,
   ScrollArea,
-  SimpleGrid,
   Stack,
   Tabs,
   Text,
@@ -23,7 +22,6 @@ import {
 import {
   IconCheck,
   IconCopy,
-  IconLink,
   IconPlayerPlay,
   IconTerminal2,
 } from "@tabler/icons-react";
@@ -96,18 +94,18 @@ function useFormCalculation(name: string) {
 }
 
 /**
- * The engine contract under every calculator: the exact JSON the engine
+ * The engine contract for every calculator: the exact JSON the engine
  * received and returned, editable and re-runnable, plus the same call from
- * the CLI, REST API, and Python. For calculators with a hand-crafted form it
- * follows the form until the request is edited; for the rest it starts from
- * the input template `clincalc calc <name>` prints.
+ * the CLI, REST API, and Python. With a hand-crafted form, the request always
+ * follows the form - each form change replaces it - while still letting you
+ * edit and run it in between. Without one, it starts from the input template
+ * `clincalc calc <name>` prints.
  */
 export function EnginePanel({ calc, crafted }: { calc: CalcSummary; crafted: boolean }) {
   const locale = useLocale();
   const fromForm = useFormCalculation(calc.name);
   const [version, setVersion] = useState("");
   const [requestText, setRequestText] = useState("");
-  const [edited, setEdited] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [running, setRunning] = useState(false);
 
@@ -116,9 +114,12 @@ export function EnginePanel({ calc, crafted }: { calc: CalcSummary; crafted: boo
   }, []);
 
   useEffect(() => {
-    setEdited(false);
+    if (crafted) {
+      setRequestText(fromForm ? pretty(fromForm.input) : "");
+      setOutcome(fromForm && { response: fromForm.response, error: fromForm.error });
+      return;
+    }
     setOutcome(null);
-    if (crafted) return;
     let active = true;
     inputTemplate(calc.name)
       .then((template) => active && setRequestText(pretty(template)))
@@ -126,34 +127,26 @@ export function EnginePanel({ calc, crafted }: { calc: CalcSummary; crafted: boo
     return () => {
       active = false;
     };
-  }, [calc.name, crafted, locale]);
-
-  const following = crafted && !edited;
-  const shownRequest = following && fromForm ? pretty(fromForm.input) : requestText;
-  const shownOutcome: Outcome | null = following
-    ? fromForm && { response: fromForm.response, error: fromForm.error }
-    : outcome;
+  }, [calc.name, crafted, locale, fromForm]);
 
   let compactInput = "{}";
   try {
-    compactInput = JSON.stringify(JSON.parse(shownRequest));
+    compactInput = JSON.stringify(JSON.parse(requestText));
   } catch {
-    compactInput = shownRequest.replace(/\s+/g, " ").trim();
+    compactInput = requestText.replace(/\s+/g, " ").trim();
   }
   const code = snippets(calc.name, compactInput);
 
   const run = async () => {
     let input: unknown;
     try {
-      input = JSON.parse(shownRequest);
+      input = JSON.parse(requestText);
     } catch (e) {
       setOutcome({ response: null, error: `Request is not valid JSON: ${String(e)}` });
-      setEdited(true);
       return;
     }
     if (typeof input !== "object" || input === null || Array.isArray(input)) {
       setOutcome({ response: null, error: "Request must be a JSON object." });
-      setEdited(true);
       return;
     }
     setRunning(true);
@@ -165,7 +158,6 @@ export function EnginePanel({ calc, crafted }: { calc: CalcSummary; crafted: boo
     } catch (e) {
       setOutcome({ response: null, error: String(e) });
     } finally {
-      setEdited(true);
       setRunning(false);
     }
   };
@@ -177,15 +169,15 @@ export function EnginePanel({ calc, crafted }: { calc: CalcSummary; crafted: boo
 
   return (
     <Accordion
+      className="engine-panel"
       variant="separated"
       radius="lg"
       defaultValue={runtime === "web" ? "engine" : null}
-      maw={920}
     >
       <Accordion.Item value="engine">
         <Accordion.Control icon={<IconTerminal2 size={20} />}>
           <Group gap="sm">
-            <Text fw={700}>Under the hood: the engine contract</Text>
+            <Text fw={700}>JSON input</Text>
             {version && (
               <Badge variant="light" color="gray">
                 {engineLine}
@@ -201,27 +193,17 @@ export function EnginePanel({ calc, crafted }: { calc: CalcSummary; crafted: boo
               and an embeddable library. This is the exact JSON the engine received and returned
               - the same contract an EPR uses to embed it.
               {crafted
-                ? " It follows the form above until you edit the request."
+                ? " The request follows the form; edit it and run it to try other inputs."
                 : " Replace each placeholder with a value, then run it."}
             </Text>
 
-            <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
+            <div className="engine-io">
               <Stack gap={6}>
                 <Group justify="space-between">
                   <Text size="xs" tt="uppercase" fw={600} c="dimmed">
                     Request
                   </Text>
                   <Group gap="xs">
-                    {crafted && edited && (
-                      <Button
-                        size="compact-xs"
-                        variant="subtle"
-                        leftSection={<IconLink size={14} />}
-                        onClick={() => setEdited(false)}
-                      >
-                        Follow the form
-                      </Button>
-                    )}
                     <Button
                       size="compact-sm"
                       leftSection={<IconPlayerPlay size={14} />}
@@ -238,11 +220,8 @@ export function EnginePanel({ calc, crafted }: { calc: CalcSummary; crafted: boo
                   minRows={6}
                   maxRows={18}
                   spellCheck={false}
-                  value={shownRequest}
-                  onChange={(e) => {
-                    setRequestText(e.currentTarget.value);
-                    setEdited(true);
-                  }}
+                  value={requestText}
+                  onChange={(e) => setRequestText(e.currentTarget.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                       e.preventDefault();
@@ -260,27 +239,27 @@ export function EnginePanel({ calc, crafted }: { calc: CalcSummary; crafted: boo
                 <Text size="xs" tt="uppercase" fw={600} c="dimmed">
                   Response
                 </Text>
-                {shownOutcome?.error && (
+                {outcome?.error && (
                   <Alert color="red" variant="light" title="The engine rejected this input">
                     <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
-                      {shownOutcome.error}
+                      {outcome.error}
                     </Text>
                   </Alert>
                 )}
-                {shownOutcome?.response && (
+                {outcome?.response && (
                   <ScrollArea.Autosize mah={420}>
                     <Code block style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                      {pretty(shownOutcome.response)}
+                      {pretty(outcome.response)}
                     </Code>
                   </ScrollArea.Autosize>
                 )}
-                {!shownOutcome && (
+                {!outcome && (
                   <Text size="sm" c="dimmed">
                     Run the request to see the engine's response.
                   </Text>
                 )}
               </Stack>
-            </SimpleGrid>
+            </div>
 
             <Tabs defaultValue="cli" variant="outline">
               <Tabs.List>

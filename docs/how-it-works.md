@@ -79,7 +79,7 @@ MCP dependencies live behind the `mcp` feature. They do not affect the `default-
 
 ### The web playground - the engine in your browser
 
-The [web playground](https://ohtf.github.io/clincalc/try/) is the same `clincalc` engine compiled to WebAssembly (the `clincalc-wasm` bindings crate, built with `default-features = false`), running inside the page behind the desktop GUI's own frontend. Nothing is sent to a server: the scoring happens in your browser, and a result there is byte-identical to the CLI's. Under every calculator, an "Under the hood" panel shows the exact JSON the engine received and returned, and the same call from the command line, REST API, and Python - the contract a host EPR uses to embed `clincalc`.
+The [web playground](https://ohtf.github.io/clincalc/try/) is the same `clincalc` engine compiled to WebAssembly (the `clincalc-wasm` bindings crate, built with `default-features = false`), running inside the page behind the desktop GUI's own frontend. Nothing is sent to a server: the scoring happens in your browser, and a result there is byte-identical to the CLI's. With every calculator, a "JSON input" panel shows the exact JSON the engine received and returned, and the same call from the command line, REST API, and Python - the contract a host EPR uses to embed `clincalc`.
 
 It is an evaluation tool for exploring `clincalc`, not for clinical decisions about real patients, and says so on every page.
 
