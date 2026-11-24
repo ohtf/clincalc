@@ -95,7 +95,7 @@ Before writing or bumping any dependency, fetch the package's official repositor
    - Unit tests against literature vectors.
 2. Register it in `clincalc::all()`.
 3. That is the only Rust work - the CLI, MCP, and GUI surfaces pick it up automatically.
-4. If it should appear in the docs catalogue, add a row to `docs/calculators.md`.
+4. Add its row to `docs/calculators.md`. In the Try column, link active calculators with `[Try it](https://ohtf.github.io/clincalc/try/#<name>)` and use `-` for unavailable entries. A registry test checks both the row and the link.
 
 This file, `spec/calculators.md`, `spec/calculator-input-definitions.md`, and the committed JSON files in `examples/` are the calculator authoring path. Do not rely on Claude-specific skills or per-agent hidden workflows.
 

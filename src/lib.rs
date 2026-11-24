@@ -294,6 +294,7 @@ pub fn get(name: &str) -> Option<Box<dyn Calculator>> {
 #[cfg(test)]
 mod registry_tests {
     use super::*;
+    use std::collections::BTreeMap;
 
     /// Policy: every calculator must declare a non-empty distribution licence
     /// with a reverifiable source URL. This guards the requirement at CI time,
@@ -511,47 +512,47 @@ mod registry_tests {
     /// return a score, so their rows carry `-` instead of a link.
     #[test]
     fn docs_catalogue_rows_match_the_registry_and_link_to_the_playground() {
-        let catalogue = include_str!("../docs/calculators.md");
-        let table = catalogue
-            .split("## Catalogue")
-            .nth(1)
-            .and_then(|rest| rest.split("\n## ").next())
+        const PLAYGROUND: &str = "https://ohtf.github.io/clincalc/try/";
+        let mut lines = include_str!("../docs/calculators.md").lines();
+        lines
+            .find(|line| *line == "## Catalogue")
             .expect("docs/calculators.md has a `## Catalogue` section");
-        let rows: Vec<&str> = table
-            .lines()
-            .filter(|line| line.starts_with("| `"))
+        let mut remaining: BTreeMap<_, _> = all()
+            .into_iter()
+            .map(|calc| (calc.name(), calc.tags().contains(&"unavailable")))
             .collect();
 
-        let mut documented: Vec<&str> = rows
-            .iter()
-            .filter_map(|row| row.split('`').nth(1))
-            .collect();
-        documented.sort_unstable();
-        let mut registered: Vec<&str> = all().iter().map(|c| c.name()).collect();
-        registered.sort_unstable();
-        assert_eq!(
-            documented, registered,
-            "docs/calculators.md's catalogue rows must match the registry one-to-one"
-        );
-
-        for calc in all() {
-            let name = calc.name();
-            let prefix = format!("| `{name}` | ");
-            let row = rows
-                .iter()
-                .find(|row| row.starts_with(&prefix))
-                .expect("row presence checked above");
-            let expected = if calc.tags().contains(&"unavailable") {
+        for row in lines.take_while(|line| !line.starts_with("## ")) {
+            let Some(row) = row.trim_start().strip_prefix('|') else {
+                continue;
+            };
+            let mut cells = row.split('|').map(str::trim);
+            let name_cell = cells.next().unwrap_or_default();
+            let Some(name) = name_cell
+                .strip_prefix('`')
+                .and_then(|s| s.strip_suffix('`'))
+            else {
+                continue; // The table header and separator are not calculator rows.
+            };
+            let unavailable = remaining.remove(name).unwrap_or_else(|| {
+                panic!("{name}: unknown or duplicate row in docs/calculators.md")
+            });
+            let expected = if unavailable {
                 "-".to_string()
             } else {
-                format!("[Try it](https://ohtf.github.io/clincalc/try/#{name})")
+                format!("[Try it]({PLAYGROUND}#{name})")
             };
-            let try_cell = row[prefix.len()..].split(" | ").next().unwrap_or_default();
             assert_eq!(
-                try_cell, expected,
+                cells.next(),
+                Some(expected.as_str()),
                 "{name}: docs/calculators.md's Try cell is missing or stale"
             );
         }
+        assert!(
+            remaining.is_empty(),
+            "Missing calculator rows in docs/calculators.md: {:?}",
+            remaining.keys().collect::<Vec<_>>()
+        );
     }
 
     /// Locale-aware companion methods must preserve the complete English

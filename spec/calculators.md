@@ -234,7 +234,7 @@ Any host that records results should do something similar; the engine itself sta
 ## Authoring a new calculator
 
 1. Implement it in `clincalc`: a typed `Input`, a pure `compute()`, a `build_response()` adapter, a `Calculator` impl with `input_schema()` and `license()` (the distribution licence plus an evidence URL), and unit tests against known vectors. Register it in `all()`. This is the **only** Rust work needed - the CLI (`clincalc calc <name>`, template, `--schema`, `--license`, `--input`) and the MCP tool are both driven generically from the registry, so there is no per-calculator CLI or MCP code to write.
-2. (Optional) add a row to [`docs/calculators.md`](../docs/calculators.md) so it appears in the published catalogue.
+2. Add a row to [`docs/calculators.md`](../docs/calculators.md). Use `[Try it](https://ohtf.github.io/clincalc/try/#<name>)` in the Try column for active calculators and `-` for unavailable entries. The registry test checks that every entry has exactly one row and the correct Try cell.
 3. (Optional) hand-craft a form under `gui/src/calculators/` (see [`gui.md`](gui.md)); it appears in both the desktop GUI and the web playground. Without one, both still run the calculator through the engine panel's input template.
 
 The authoring workflow is intentionally repository-native: start with `AGENTS.md`, this spec, `spec/calculator-input-definitions.md`, and the committed JSON files in `examples/`. That path works for any coding agent and keeps calculator authoring independent of Claude-specific skills.

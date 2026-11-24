@@ -105,6 +105,7 @@ Status: Planned follow-ups
 
 The playground shipped at <https://ohtf.github.io/clincalc/try/>: the engine compiled to WebAssembly (`clincalc-wasm/`) behind the desktop GUI's own frontend, deployed alongside the Zensical docs. The design and its decisions (WebAssembly over a TypeScript port, one shared frontend, evaluation-only framing, the engine panel) are recorded in [`calculators.md`](calculators.md#web-playground-clincalc-wasm--the-shared-gui-frontend) and [`gui.md`](gui.md#one-frontend-two-runtimes).
 
+- [x] **ENG-003.5 Link the docs catalogue to the playground** - Each active entry links to its calculator. A registry test catches missing, duplicate or stale links.
 - [ ] **ENG-003.6 Self-host the Lato font** - `gui/index.html` loads it from Google Fonts, so every playground visit makes a third-party request (no user input is sent, but the visitor's IP is). Bundle it instead, for the desktop app too.
 - [ ] **ENG-003.7 Shrink the WebAssembly download** - about 880 KB gzipped today, mostly clinical text. Measure `wasm-opt -Oz` and per-calculator lazy loading before choosing either.
 
