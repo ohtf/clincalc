@@ -505,6 +505,55 @@ mod registry_tests {
         );
     }
 
+    /// Policy: docs/calculators.md's catalogue has exactly one row per
+    /// registry entry, and every active row links to that calculator in the
+    /// web playground (`try/#<name>`, ENG-003.5). Unavailable entries never
+    /// return a score, so their rows carry `-` instead of a link.
+    #[test]
+    fn docs_catalogue_rows_match_the_registry_and_link_to_the_playground() {
+        let catalogue = include_str!("../docs/calculators.md");
+        let table = catalogue
+            .split("## Catalogue")
+            .nth(1)
+            .and_then(|rest| rest.split("\n## ").next())
+            .expect("docs/calculators.md has a `## Catalogue` section");
+        let rows: Vec<&str> = table
+            .lines()
+            .filter(|line| line.starts_with("| `"))
+            .collect();
+
+        let mut documented: Vec<&str> = rows
+            .iter()
+            .filter_map(|row| row.split('`').nth(1))
+            .collect();
+        documented.sort_unstable();
+        let mut registered: Vec<&str> = all().iter().map(|c| c.name()).collect();
+        registered.sort_unstable();
+        assert_eq!(
+            documented, registered,
+            "docs/calculators.md's catalogue rows must match the registry one-to-one"
+        );
+
+        for calc in all() {
+            let name = calc.name();
+            let prefix = format!("| `{name}` | ");
+            let row = rows
+                .iter()
+                .find(|row| row.starts_with(&prefix))
+                .expect("row presence checked above");
+            let expected = if calc.tags().contains(&"unavailable") {
+                "-".to_string()
+            } else {
+                format!("[Try it](https://ohtf.github.io/clincalc/try/#{name})")
+            };
+            let try_cell = row[prefix.len()..].split(" | ").next().unwrap_or_default();
+            assert_eq!(
+                try_cell, expected,
+                "{name}: docs/calculators.md's Try cell is missing or stale"
+            );
+        }
+    }
+
     /// Locale-aware companion methods must preserve the complete English
     /// contract until a calculator opts into a reviewed translation bundle.
     #[test]
