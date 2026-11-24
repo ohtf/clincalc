@@ -294,6 +294,7 @@ pub fn get(name: &str) -> Option<Box<dyn Calculator>> {
 #[cfg(test)]
 mod registry_tests {
     use super::*;
+    use std::collections::BTreeMap;
 
     /// Policy: every calculator must declare a non-empty distribution licence
     /// with a reverifiable source URL. This guards the requirement at CI time,
@@ -502,6 +503,55 @@ mod registry_tests {
         assert!(
             catalogue.contains(&expected_catalogue_prefix),
             "docs/calculators.md's registry-size summary is stale; expected to find: {expected_catalogue_prefix}"
+        );
+    }
+
+    /// Policy: docs/calculators.md's catalogue has exactly one row per
+    /// registry entry, and every active row links to that calculator in the
+    /// web playground (`try/#<name>`, ENG-003.5). Unavailable entries never
+    /// return a score, so their rows carry `-` instead of a link.
+    #[test]
+    fn docs_catalogue_rows_match_the_registry_and_link_to_the_playground() {
+        const PLAYGROUND: &str = "https://ohtf.github.io/clincalc/try/";
+        let mut lines = include_str!("../docs/calculators.md").lines();
+        lines
+            .find(|line| *line == "## Catalogue")
+            .expect("docs/calculators.md has a `## Catalogue` section");
+        let mut remaining: BTreeMap<_, _> = all()
+            .into_iter()
+            .map(|calc| (calc.name(), calc.tags().contains(&"unavailable")))
+            .collect();
+
+        for row in lines.take_while(|line| !line.starts_with("## ")) {
+            let Some(row) = row.trim_start().strip_prefix('|') else {
+                continue;
+            };
+            let mut cells = row.split('|').map(str::trim);
+            let name_cell = cells.next().unwrap_or_default();
+            let Some(name) = name_cell
+                .strip_prefix('`')
+                .and_then(|s| s.strip_suffix('`'))
+            else {
+                continue; // The table header and separator are not calculator rows.
+            };
+            let unavailable = remaining.remove(name).unwrap_or_else(|| {
+                panic!("{name}: unknown or duplicate row in docs/calculators.md")
+            });
+            let expected = if unavailable {
+                "-".to_string()
+            } else {
+                format!("[Try it]({PLAYGROUND}#{name})")
+            };
+            assert_eq!(
+                cells.next(),
+                Some(expected.as_str()),
+                "{name}: docs/calculators.md's Try cell is missing or stale"
+            );
+        }
+        assert!(
+            remaining.is_empty(),
+            "Missing calculator rows in docs/calculators.md: {:?}",
+            remaining.keys().collect::<Vec<_>>()
         );
     }
 
